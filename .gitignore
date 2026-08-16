@@ -14,3 +14,6 @@ backend/.env.*
 *.dump
 backend/build/
 backend/*.egg-info/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
