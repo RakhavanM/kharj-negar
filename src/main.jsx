@@ -5,6 +5,7 @@ import '@fontsource/vazirmatn/500.css';
 import '@fontsource/vazirmatn/600.css';
 import '@fontsource/vazirmatn/700.css';
 import './styles.css';
+import { applyTheme, getEffectiveTheme, getSystemTheme, nextTheme, readThemePreference, saveThemePreference, THEME_STORAGE_KEY } from './theme.js';
 import {
   apiChangePassword,
   apiCreateExpense,
@@ -60,6 +61,11 @@ const PREVIEW_EXPENSES = [
   { id: 'preview-5', amountToman: 750_000, person: PEOPLE.ramin, category: CATEGORIES.daily, date: '2025-03-14', note: 'غذای بیرون', createdAt: '2025-03-14T20:20:00.000Z' },
 ];
 
+function ThemeToggle({ theme, onToggle }) {
+  const dark = theme === 'dark';
+  return <button className="theme-toggle" type="button" onClick={onToggle} aria-label={dark ? 'فعال کردن حالت روشن' : 'فعال کردن حالت تاریک'} title={dark ? 'حالت روشن' : 'حالت تاریک'} aria-pressed={dark}><Icon name={dark ? 'sun' : 'moon'} size={16} /><span>{dark ? 'Light' : 'Dark'}</span></button>;
+}
+
 function readStorage(key, fallback) {
   try {
     const value = window.localStorage.getItem(key);
@@ -95,6 +101,8 @@ function Icon({ name, size = 20 }) {
     search: <><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></>,
     lock: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
     download: <><path d="M12 3v11M7 10l5 5 5-5" /><path d="M4 20h16" /></>,
+    moon: <><path d="M20.5 15.6A8.5 8.5 0 0 1 8.4 3.5 8.5 8.5 0 1 0 20.5 15.6Z" /></>,
+    sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>,
     logout: <><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9" /></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
@@ -110,6 +118,9 @@ function getCurrentMonth() {
 
 function App() {
   const production = isProductionHost();
+  const [themePreference, setThemePreference] = useState(() => readThemePreference());
+  const [systemTheme, setSystemTheme] = useState(() => getSystemTheme());
+  const theme = getEffectiveTheme(themePreference, systemTheme);
   const [demoSession, setDemoSession] = usePersistentState(SESSION_KEY, null);
   const [serverSession, setServerSession] = useState(null);
   const session = production ? serverSession : demoSession;
@@ -130,6 +141,23 @@ function App() {
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const onSystemThemeChange = (event) => setSystemTheme(event.matches ? 'dark' : 'light');
+    media.addEventListener?.('change', onSystemThemeChange);
+    return () => media.removeEventListener?.('change', onSystemThemeChange);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = nextTheme(theme);
+    saveThemePreference(next);
+    setThemePreference(next);
+  };
 
   const notify = (message, type = 'success') => {
     setToast({ message, type });
@@ -264,7 +292,7 @@ function App() {
   };
 
   return <div className="app-shell">
-    <header className="topbar"><div className="brand-lockup"><div className="brand-mark"><span>خ</span></div><div><strong>خرج‌نگار</strong><small>هزینه‌های خونه</small></div></div><div className="topbar-actions"><span className="prototype-chip">{production ? 'نسخه اصلی' : 'نسخه آزمایشی'}</span>{production && <button className="download-button" type="button" onClick={downloadExport} disabled={exporting} title="دانلود خروجی Excel"><Icon name="download" size={16} /><span>{exporting ? 'در حال آماده‌سازی...' : 'Download'}</span></button>}<button className="profile-button" type="button" onClick={() => setPasswordModalOpen(true)} title="تغییر رمز عبور"><span>{PERSON_LABELS[session.person][0]}</span><Icon name="lock" size={17} /></button><button className="logout-button" onClick={async () => { if (production) await apiLogout(); setSession(null); }} title="خروج از حساب"><Icon name="logout" size={17} /></button></div></header>
+    <header className="topbar"><div className="brand-lockup"><div className="brand-mark"><span>خ</span></div><div><strong>خرج‌نگار</strong><small>هزینه‌های خونه</small></div></div><div className="topbar-actions"><span className="prototype-chip">{production ? 'نسخه اصلی' : 'نسخه آزمایشی'}</span><ThemeToggle theme={theme} onToggle={toggleTheme} />{production && <button className="download-button" type="button" onClick={downloadExport} disabled={exporting} title="دانلود خروجی Excel"><Icon name="download" size={16} /><span>{exporting ? 'در حال آماده‌سازی...' : 'Download'}</span></button>}<button className="profile-button" type="button" onClick={() => setPasswordModalOpen(true)} title="تغییر رمز عبور"><span>{PERSON_LABELS[session.person][0]}</span><Icon name="lock" size={17} /></button><button className="logout-button" onClick={async () => { if (production) await apiLogout(); setSession(null); }} title="خروج از حساب"><Icon name="logout" size={17} /></button></div></header>
     <main className="page-content">
       <section className="welcome-row"><div><p className="eyebrow">داشبورد مشترک</p><h1>سلام {PERSON_LABELS[session.person]} <span aria-hidden="true">!</span></h1><p className="muted">هزینه‌ها را ثبت کنید تا تصویر روشن‌تری از خرج‌های خانه داشته باشید.</p></div><button className="primary-button desktop-add" onClick={openAdd}><Icon name="plus" size={20} />ثبت هزینه جدید</button></section>
       <div className="prototype-note"><Icon name="lock" size={17} /><span>{production ? 'داده‌ها به‌صورت امن روی سرور مشترک ذخیره می‌شوند.' : 'این نسخه برای بررسی محصول روی GitHub Pages است؛ داده‌ها فعلاً فقط در همین مرورگر ذخیره می‌شوند.'}</span>{!production && <button onClick={() => setPreviewMode((mode) => !mode)}>{previewMode ? 'داده‌های من' : 'نمایش نمونه'}</button>}</div>
