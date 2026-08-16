@@ -8,6 +8,7 @@ import './styles.css';
 import {
   apiChangePassword,
   apiCreateExpense,
+  apiDownloadExport,
   apiDeleteExpense,
   apiExpenseToLocal,
   apiListExpenses,
@@ -93,6 +94,7 @@ function Icon({ name, size = 20 }) {
     chevron: <path d="m9 6 6 6-6 6" />,
     search: <><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></>,
     lock: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
+    download: <><path d="M12 3v11M7 10l5 5 5-5" /><path d="M4 20h16" /></>,
     logout: <><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9" /></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
@@ -127,6 +129,7 @@ function App() {
   const [refreshingSummary, setRefreshingSummary] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const notify = (message, type = 'success') => {
     setToast({ message, type });
@@ -225,6 +228,27 @@ function App() {
     setSelectedMonth(getMonthKey(form.date));
   };
 
+  const downloadExport = async () => {
+    if (!production || exporting) return;
+    setExporting(true);
+    try {
+      const { blob, filename } = await apiDownloadExport();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      notify('فایل Excel آماده شد.');
+    } catch (error) {
+      notify(error.message, 'info');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const deleteExpense = (expense) => {
     if (!window.confirm('این هزینه حذف شود؟')) return;
     if (production) {
@@ -240,7 +264,7 @@ function App() {
   };
 
   return <div className="app-shell">
-    <header className="topbar"><div className="brand-lockup"><div className="brand-mark"><span>خ</span></div><div><strong>خرج‌نگار</strong><small>هزینه‌های خونه</small></div></div><div className="topbar-actions"><span className="prototype-chip">{production ? 'نسخه اصلی' : 'نسخه آزمایشی'}</span><button className="profile-button" onClick={() => setPasswordModalOpen(true)} title="تغییر رمز عبور"><span>{PERSON_LABELS[session.person][0]}</span><Icon name="lock" size={17} /></button><button className="logout-button" onClick={async () => { if (production) await apiLogout(); setSession(null); }} title="خروج از حساب"><Icon name="logout" size={17} /></button></div></header>
+    <header className="topbar"><div className="brand-lockup"><div className="brand-mark"><span>خ</span></div><div><strong>خرج‌نگار</strong><small>هزینه‌های خونه</small></div></div><div className="topbar-actions"><span className="prototype-chip">{production ? 'نسخه اصلی' : 'نسخه آزمایشی'}</span>{production && <button className="download-button" type="button" onClick={downloadExport} disabled={exporting} title="دانلود خروجی Excel"><Icon name="download" size={16} /><span>{exporting ? 'در حال آماده‌سازی...' : 'Download'}</span></button>}<button className="profile-button" type="button" onClick={() => setPasswordModalOpen(true)} title="تغییر رمز عبور"><span>{PERSON_LABELS[session.person][0]}</span><Icon name="lock" size={17} /></button><button className="logout-button" onClick={async () => { if (production) await apiLogout(); setSession(null); }} title="خروج از حساب"><Icon name="logout" size={17} /></button></div></header>
     <main className="page-content">
       <section className="welcome-row"><div><p className="eyebrow">داشبورد مشترک</p><h1>سلام {PERSON_LABELS[session.person]} <span aria-hidden="true">!</span></h1><p className="muted">هزینه‌ها را ثبت کنید تا تصویر روشن‌تری از خرج‌های خانه داشته باشید.</p></div><button className="primary-button desktop-add" onClick={openAdd}><Icon name="plus" size={20} />ثبت هزینه جدید</button></section>
       <div className="prototype-note"><Icon name="lock" size={17} /><span>{production ? 'داده‌ها به‌صورت امن روی سرور مشترک ذخیره می‌شوند.' : 'این نسخه برای بررسی محصول روی GitHub Pages است؛ داده‌ها فعلاً فقط در همین مرورگر ذخیره می‌شوند.'}</span>{!production && <button onClick={() => setPreviewMode((mode) => !mode)}>{previewMode ? 'داده‌های من' : 'نمایش نمونه'}</button>}</div>

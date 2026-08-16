@@ -10,6 +10,7 @@ Group=kharjapp
 WorkingDirectory=/opt/kharj-negar/backend
 EnvironmentFile=/etc/kharj-negar/backend.env
 Environment=KHARJ_ENV_FILE=/etc/kharj-negar/backend.env
+Environment=PYTHONPATH=/opt/kharj-negar/backend/vendor
 ExecStart=/opt/kharj-negar/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
 Restart=on-failure
 RestartSec=5

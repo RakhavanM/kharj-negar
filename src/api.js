@@ -69,6 +69,18 @@ export async function apiDeleteExpense(id) {
   return apiRequest(`/expenses/${id}`, { method: 'DELETE' });
 }
 
+export async function apiDownloadExport() {
+  const response = await fetch(`${API_PREFIX}/export/xlsx`, { credentials: 'include' });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || 'دانلود فایل خروجی انجام نشد.');
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const filename = disposition.match(/filename="([^"]+)"/)?.[1] || `kharj-negar-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  return { blob, filename };
+}
+
 export function apiExpenseToLocal(expense) {
   return {
     id: String(expense.id),

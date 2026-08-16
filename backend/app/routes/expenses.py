@@ -1,6 +1,7 @@
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -11,6 +12,31 @@ from ..models import Expense, User
 from ..schemas import ComparisonResponse, ExpenseListResponse, ExpensePayload, ExpenseResponse, SummaryResponse, expense_response
 
 router = APIRouter()
+
+
+@router.get("/export/xlsx")
+def export_xlsx(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    from ..export_xlsx import create_expenses_workbook
+
+    expenses = list(
+        db.scalars(
+            select(Expense)
+            .where(Expense.household_id == user.household_id)
+            .order_by(Expense.expense_date.desc(), Expense.created_at.desc())
+        )
+    )
+    users = list(db.scalars(select(User).where(User.household_id == user.household_id).order_by(User.id)))
+    workbook = create_expenses_workbook(expenses, users=users, household_name="خرج‌نگار")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    filename = f"kharj-negar-export-{timestamp}.xlsx"
+    return StreamingResponse(
+        iter([workbook]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/expenses", response_model=ExpenseListResponse)
