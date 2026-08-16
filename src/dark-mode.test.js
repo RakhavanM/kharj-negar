@@ -36,5 +36,6 @@ describe('system dark mode contract', () => {
     expect(styles).toContain('.brand-mark,');
     expect(styles).toContain('.profile-button span,');
     expect(styles).toContain('.insight-mark,');
+    expect(styles).toContain('.theme-toggle {');
   });
 });
