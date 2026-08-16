@@ -105,12 +105,13 @@ function App() {
     window.setTimeout(() => setToast(null), 2800);
   };
 
-  if (!session) return <LoginScreen onLogin={(person) => setSession({ person, loggedAt: Date.now() })} />;
-
-  const monthOptions = getMonthOptions(selectedMonth);
   const visibleExpenses = previewMode ? PREVIEW_EXPENSES : expenses;
   const filteredExpenses = useMemo(() => sortExpenses(filterExpenses(visibleExpenses, { month: selectedMonth, ...filters })), [visibleExpenses, selectedMonth, filters]);
   const summary = useMemo(() => getMonthSummary(visibleExpenses, selectedMonth, filters), [visibleExpenses, selectedMonth, filters]);
+
+  if (!session) return <LoginScreen onLogin={(person) => setSession({ person, loggedAt: Date.now() })} />;
+
+  const monthOptions = getMonthOptions(selectedMonth);
 
   const openAdd = () => { setEditingExpense(null); setFormOpen(true); };
   const openEdit = (expense) => { setEditingExpense(expense); setFormOpen(true); };
