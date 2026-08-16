@@ -22,4 +22,11 @@ describe('download confirmation contract', () => {
     expect(styles).toContain('.theme-toggle span { display: none; }');
     expect(styles).toContain('.download-button span { display: none; }');
   });
+
+  it('uses the toggle accent pair for the dark download button', () => {
+    expect(styles).toContain('.download-button { width: 36px;');
+    expect(styles).toContain('color: var(--on-accent); background: var(--wise-green);');
+    expect(styles).toContain('.download-button:hover { color: var(--on-accent); background: var(--pastel);');
+    expect(styles).toContain('color: var(--on-accent); background: var(--wise-green);');
+  });
 });

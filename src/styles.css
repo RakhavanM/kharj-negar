@@ -119,8 +119,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .profile-button span { width: 34px; height: 34px; display: grid; place-items: center; color: var(--on-accent); background: var(--wise-green); border-radius: 50%; font-size: 14px; font-weight: 700; }
 .logout-button { width: 31px; height: 31px; display: grid; place-items: center; color: var(--muted); background: var(--soft-green); border-radius: 50%; }
 .logout-button:hover { color: var(--dark-green); background: var(--wise-green); }
-.download-button { width: 36px; height: 36px; min-height: 36px; display: inline-grid; place-items: center; color: var(--dark-green); background: var(--mint); border: 1px solid rgba(22, 51, 0, .14); border-radius: 50%; padding: 0; box-shadow: var(--shadow-ring); transition: background .2s ease, transform .2s ease, box-shadow .2s ease; }
-.download-button:hover { background: var(--wise-green); transform: translateY(-1px); box-shadow: 0 5px 14px rgba(14, 15, 12, .1); }
+.download-button { width: 36px; height: 36px; min-height: 36px; display: inline-grid; place-items: center; color: var(--on-accent); background: var(--wise-green); border: 1px solid rgba(22, 51, 0, .14); border-radius: 50%; padding: 0; box-shadow: var(--shadow-ring); transition: background .2s ease, transform .2s ease, box-shadow .2s ease; }
+.download-button:hover { color: var(--on-accent); background: var(--pastel); transform: translateY(-1px); box-shadow: 0 5px 14px rgba(14, 15, 12, .1); }
 .download-button:active { transform: scale(.97); }
 .download-button:disabled { cursor: wait; opacity: .65; }
 .theme-toggle span, .download-button span { display: none; }
@@ -313,8 +313,8 @@ h2 { color: var(--ink); font-size: 20px; line-height: 1.35; letter-spacing: -.45
 .password-modal .expense-form label { gap: 8px; }
 .password-modal .expense-form input { background: rgba(255, 255, 255, .9); border-color: rgba(22, 51, 0, .2); }
 .password-modal .primary-button { min-width: 125px; }
-.download-button { width: 36px; height: 36px; min-height: 36px; display: inline-grid; place-items: center; color: var(--dark-green); background: var(--mint); border: 1px solid rgba(22, 51, 0, .14); border-radius: 50%; padding: 0; box-shadow: var(--shadow-ring); transition: background .2s ease, transform .2s ease, box-shadow .2s ease; }
-.download-button:hover { background: var(--wise-green); transform: translateY(-1px); box-shadow: 0 5px 14px rgba(14, 15, 12, .1); }
+.download-button { width: 36px; height: 36px; min-height: 36px; display: inline-grid; place-items: center; color: var(--on-accent); background: var(--wise-green); border: 1px solid rgba(22, 51, 0, .14); border-radius: 50%; padding: 0; box-shadow: var(--shadow-ring); transition: background .2s ease, transform .2s ease, box-shadow .2s ease; }
+.download-button:hover { color: var(--on-accent); background: var(--pastel); transform: translateY(-1px); box-shadow: 0 5px 14px rgba(14, 15, 12, .1); }
 .download-button:active { transform: scale(.97); }
 .download-button:disabled { cursor: wait; opacity: .65; }
 .theme-toggle span, .download-button span { display: none; }
