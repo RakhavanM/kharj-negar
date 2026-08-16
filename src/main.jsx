@@ -103,7 +103,10 @@ function getCurrentMonth() {
 
 function App() {
   const production = isProductionHost();
-  const [session, setSession] = usePersistentState(SESSION_KEY, null);
+  const [demoSession, setDemoSession] = usePersistentState(SESSION_KEY, null);
+  const [serverSession, setServerSession] = useState(null);
+  const session = production ? serverSession : demoSession;
+  const setSession = production ? setServerSession : setDemoSession;
   const [expenses, setExpenses] = usePersistentState(STORAGE_KEY, DEMO_EXPENSES);
   const [activeView, setActiveView] = useState('dashboard');
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());

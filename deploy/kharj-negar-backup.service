@@ -1,0 +1,10 @@
+[Unit]
+Description=Encrypted Kharj Negar PostgreSQL backup
+After=postgresql.service
+ConditionPathExists=/etc/kharj-negar/age-recipient
+ConditionPathExists=/etc/kharj-negar/github-backup-token
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/kharj-negar/backend.env
+ExecStart=/usr/local/sbin/kharj-negar-backup.sh
