@@ -40,6 +40,7 @@ export const CATEGORY_ICONS = Object.freeze({
 
 const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+export const JALALI_MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
 
 export function normalizeDigits(value) {
   return String(value ?? '')
@@ -195,6 +196,34 @@ export function getTodayJalaliString(now = new Date()) {
   return isoToJalaliString(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`);
 }
 
+export function toPersianDigits(value) {
+  const digits = '۰۱۲۳۴۵۶۷۸۹';
+  return String(value).replace(/\d/g, (digit) => digits[Number(digit)]);
+}
+
+export function shiftJalaliMonth({ jy, jm }, offset) {
+  const absoluteMonth = jy * 12 + (jm - 1) + offset;
+  const nextYear = Math.floor(absoluteMonth / 12);
+  const nextMonth = ((absoluteMonth % 12) + 12) % 12 + 1;
+  return { jy: nextYear, jm: nextMonth };
+}
+
+export function getJalaliMonthLabel({ jy, jm }) {
+  return `${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)}`;
+}
+
+export function getJalaliCalendarWeeks(jy, jm) {
+  const firstGregorian = jalaliToGregorian({ jy, jm, jd: 1 });
+  const firstWeekdayFromSaturday = (new Date(Date.UTC(firstGregorian.gy, firstGregorian.gm - 1, firstGregorian.gd)).getUTCDay() + 1) % 7;
+  const daysInMonth = jalaliMonthLength(jy, jm);
+  const cells = Array(firstWeekdayFromSaturday).fill(null);
+  for (let jd = 1; jd <= daysInMonth; jd += 1) cells.push({ jy, jm, jd });
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks = [];
+  for (let index = 0; index < cells.length; index += 7) weeks.push(cells.slice(index, index + 7));
+  return weeks;
+}
+
 export function getMonthKey(isoDate) {
   const { jy, jm } = toJalali(`${isoDate}T12:00:00`);
   return `${jy}-${String(jm).padStart(2, '0')}`;
@@ -202,8 +231,7 @@ export function getMonthKey(isoDate) {
 
 export function getMonthLabel(monthKey) {
   const [jy, jm] = monthKey.split('-').map(Number);
-  const months = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
-  return `${months[jm - 1]} ${jy}`;
+  return `${JALALI_MONTHS[jm - 1]} ${jy}`;
 }
 
 export function getMonthOptions(centerMonthKey, count = 7) {

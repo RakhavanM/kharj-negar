@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource/vazirmatn/400.css';
 import '@fontsource/vazirmatn/500.css';
@@ -34,12 +34,17 @@ import {
   getMonthLabel,
   getMonthOptions,
   getMonthSummary,
+  getJalaliCalendarWeeks,
+  getJalaliMonthLabel,
+  JALALI_MONTHS,
   getTodayJalaliString,
   isoToJalaliString,
   jalaliToIso,
   normalizeDigits,
   parseJalaliDate,
+  shiftJalaliMonth,
   sortExpenses,
+  toPersianDigits,
 } from './domain/expenses.js';
 
 const STORAGE_KEY = 'kharj-negar-expenses-v1';
@@ -119,11 +124,21 @@ function App() {
   const [loading, setLoading] = useState(production);
   const [serverData, setServerData] = useState({ expenses: [], summary: null });
   const [serverError, setServerError] = useState('');
+  const [refreshingSummary, setRefreshingSummary] = useState(false);
 
   const notify = (message, type = 'success') => {
     setToast({ message, type });
     window.setTimeout(() => setToast(null), 2800);
   };
+
+  const reloadServerData = useCallback(async (month, activeFilters) => {
+    const [list, nextSummary] = await Promise.all([
+      apiListExpenses({ month, ...activeFilters }),
+      apiSummary({ month, ...activeFilters }),
+    ]);
+    setServerData({ expenses: list.items.map(apiExpenseToLocal), summary: nextSummary });
+    setServerError('');
+  }, []);
 
   useEffect(() => {
     if (!production) return;
@@ -143,19 +158,11 @@ function App() {
     if (!production || !session) return;
     let active = true;
     setLoading(true);
-    Promise.all([
-      apiListExpenses({ month: selectedMonth, ...filters }),
-      apiSummary({ month: selectedMonth, ...filters }),
-    ])
-      .then(([list, nextSummary]) => {
-        if (!active) return;
-        setServerData({ expenses: list.items.map(apiExpenseToLocal), summary: nextSummary });
-        setServerError('');
-      })
+    reloadServerData(selectedMonth, filters)
       .catch((error) => active && setServerError(error.message))
       .finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, [production, session, selectedMonth, filters]);
+  }, [production, session, selectedMonth, filters, reloadServerData]);
 
   const visibleExpenses = previewMode ? PREVIEW_EXPENSES : expenses;
   const localFilteredExpenses = useMemo(() => sortExpenses(filterExpenses(visibleExpenses, { month: selectedMonth, ...filters })), [visibleExpenses, selectedMonth, filters]);
@@ -186,12 +193,18 @@ function App() {
     if (production) {
       const request = editingExpense ? apiUpdateExpense(editingExpense.serverId || editingExpense.id, productionPayload(form)) : apiCreateExpense(productionPayload(form));
       request.then((saved) => {
-        setServerData((current) => ({ ...current, expenses: editingExpense ? current.expenses.map((item) => item.id === String(saved.id) ? apiExpenseToLocal(saved) : item) : [apiExpenseToLocal(saved), ...current.expenses] }));
         setFormOpen(false);
         setEditingExpense(null);
-        setSelectedMonth(getMonthKey(form.date));
+        const targetMonth = getMonthKey(form.date);
+        setSelectedMonth(targetMonth);
+        setRefreshingSummary(true);
+        if (targetMonth !== selectedMonth) return null;
+        return reloadServerData(targetMonth, filters);
+      }).then(() => {
         notify(editingExpense ? 'هزینه ویرایش شد.' : 'هزینه ثبت شد.');
-      }).catch((error) => notify(error.message, 'info'));
+      }).catch((error) => notify(error.message, 'info')).finally(() => {
+        setRefreshingSummary(false);
+      });
       return;
     }
     if (editingExpense) {
@@ -209,8 +222,13 @@ function App() {
     if (!window.confirm('این هزینه حذف شود؟')) return;
     if (production) {
       apiDeleteExpense(expense.serverId || expense.id)
-        .then(() => { setServerData((current) => ({ ...current, expenses: current.expenses.filter((item) => item.id !== expense.id) })); notify('هزینه حذف شد.', 'info'); })
-        .catch((error) => notify(error.message, 'info'));
+        .then(() => {
+          setRefreshingSummary(true);
+          return reloadServerData(selectedMonth, filters);
+        })
+        .then(() => notify('هزینه حذف شد.', 'info'))
+        .catch((error) => notify(error.message, 'info'))
+        .finally(() => setRefreshingSummary(false));
       return;
     }
     setExpenses((current) => current.filter((item) => item.id !== expense.id));
@@ -260,7 +278,7 @@ function App() {
         {showFilters && <FilterPanel filters={filters} setFilters={setFilters} onClose={() => setShowFilters(false)} />}
 
         <section className="summary-grid" aria-label="خلاصه هزینه‌ها">
-          <div className="total-card"><div className="card-kicker"><span className="kicker-dot" />مجموع هزینه‌ها</div><strong>{formatToman(summary.total).replace(' تومان', '')}</strong><span className="card-unit">تومان</span><div className="total-card-foot"><span>{summary.count} هزینه در {getMonthLabel(selectedMonth)}</span><span className="trend">● ثبت‌شده</span></div></div>
+          <div className={`total-card ${refreshingSummary ? 'is-refreshing' : ''}`}><div className="card-kicker"><span className="kicker-dot" />مجموع هزینه‌ها</div><strong>{formatToman(summary.total).replace(' تومان', '')}</strong><span className="card-unit">تومان</span><div className="total-card-foot"><span>{summary.count} هزینه در {getMonthLabel(selectedMonth)}</span><span className="trend">● ثبت‌شده</span></div></div>
           <PersonCard label="رامین" color="blue" amount={summary.byPerson[PEOPLE.ramin]} total={summary.total} />
           <PersonCard label="مانا" color="green" amount={summary.byPerson[PEOPLE.mana]} total={summary.total} />
         </section>
@@ -341,7 +359,35 @@ function FilterPanel({ filters, setFilters, onClose }) {
 function ExpenseModal({ expense, onSave, onClose }) {
   const [form, setForm] = useState(() => expense ? { amount: String(expense.amountToman / 1000), person: expense.person, category: expense.category, date: isoToJalaliString(expense.date), note: expense.note || '' } : { amount: '', person: PEOPLE.ramin, category: CATEGORIES.daily, date: getTodayJalaliString(), note: '' });
   const [error, setError] = useState('');
+  const parsedInitialDate = (() => { try { return parseJalaliDate(form.date); } catch { return parseJalaliDate(getTodayJalaliString()); } })();
+  const [calendarMonth, setCalendarMonth] = useState({ jy: parsedInitialDate.jy, jm: parsedInitialDate.jm });
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const calendarWeeks = getJalaliCalendarWeeks(calendarMonth.jy, calendarMonth.jm);
+  const selectedJalali = (() => { try { return parseJalaliDate(form.date); } catch { return null; } })();
   const update = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const chooseCalendarDate = (day) => {
+    const selected = `${day.jy}/${String(day.jm).padStart(2, '0')}/${String(day.jd).padStart(2, '0')}`;
+    update('date', selected);
+    setCalendarOpen(false);
+  };
+  const openCalendar = () => {
+    try {
+      const currentDate = parseJalaliDate(form.date);
+      setCalendarMonth({ jy: currentDate.jy, jm: currentDate.jm });
+    } catch {
+      // Keep the current calendar month while the user is typing an incomplete date.
+    }
+    setCalendarOpen(true);
+  };
+  const toggleCalendar = () => {
+    if (!calendarOpen) openCalendar();
+    else setCalendarOpen(false);
+  };
+  const goToCalendarToday = () => {
+    const today = parseJalaliDate(getTodayJalaliString());
+    setCalendarMonth({ jy: today.jy, jm: today.jm });
+    chooseCalendarDate(today);
+  };
   const submit = (event) => {
     event.preventDefault();
     try {
@@ -349,7 +395,17 @@ function ExpenseModal({ expense, onSave, onClose }) {
       onSave({ amountToman: amountInputToToman(form.amount), person: form.person, category: form.category, date, note: form.note.trim() });
     } catch (submissionError) { setError(submissionError.message); }
   };
-  return <div className="modal-backdrop" role="presentation"><section className="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title"><div className="modal-head"><div><p className="eyebrow">{expense ? 'ویرایش رکورد' : 'ثبت رکورد جدید'}</p><h2 id="expense-modal-title">{expense ? 'ویرایش هزینه' : 'هزینه جدید'}</h2></div><button onClick={onClose} aria-label="بستن"><Icon name="close" size={21} /></button></div><form onSubmit={submit} className="expense-form"><label className="amount-field">مبلغ <span>هزار تومان</span><div><input inputMode="numeric" autoFocus value={formatInputThousands(form.amount)} onChange={(event) => update('amount', normalizeDigits(event.target.value))} placeholder="مثلاً ۵۰۰" /><b>٬۰۰۰ تومان</b></div><small>مثلاً ۵۰۰ یعنی ۵۰۰ هزار تومان</small></label><div className="form-two-col"><label>خرج‌کننده<select value={form.person} onChange={(event) => update('person', event.target.value)}>{Object.values(PEOPLE).map((person) => <option value={person} key={person}>{PERSON_LABELS[person]}</option>)}</select></label><label>دسته‌بندی<select value={form.category} onChange={(event) => update('category', event.target.value)}>{Object.values(CATEGORIES).map((category) => <option value={category} key={category}>{CATEGORY_LABELS[category]}</option>)}</select></label></div><label>تاریخ <span className="label-hint">شمسی</span><input value={form.date} onChange={(event) => update('date', event.target.value)} placeholder="۱۴۰۴/۰۱/۰۱" inputMode="numeric" /></label><label>توضیحات <span className="label-hint">اختیاری</span><textarea value={form.note} onChange={(event) => update('note', event.target.value)} placeholder="برای یادآوری بیشتر بنویسید..." rows="3" /></label>{error && <p className="form-error">{error}</p>}<div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>انصراف</button><button type="submit" className="primary-button">{expense ? 'ذخیره تغییرات' : 'ثبت هزینه'} <Icon name="plus" size={18} /></button></div></form></section></div>;
+  return <div className="modal-backdrop" role="presentation"><section className="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title"><div className="modal-head"><div><p className="eyebrow">{expense ? 'ویرایش رکورد' : 'ثبت رکورد جدید'}</p><h2 id="expense-modal-title">{expense ? 'ویرایش هزینه' : 'هزینه جدید'}</h2></div><button onClick={onClose} aria-label="بستن"><Icon name="close" size={21} /></button></div><form onSubmit={submit} className="expense-form"><label className="amount-field">مبلغ <span>هزار تومان</span><div><input inputMode="numeric" autoFocus value={formatInputThousands(form.amount)} onChange={(event) => update('amount', normalizeDigits(event.target.value))} placeholder="مثلاً ۵۰۰" /><b>٬۰۰۰ تومان</b></div><small>مثلاً ۵۰۰ یعنی ۵۰۰ هزار تومان</small></label><div className="form-two-col"><label>خرج‌کننده<select value={form.person} onChange={(event) => update('person', event.target.value)}>{Object.values(PEOPLE).map((person) => <option value={person} key={person}>{PERSON_LABELS[person]}</option>)}</select></label><label>دسته‌بندی<select value={form.category} onChange={(event) => update('category', event.target.value)}>{Object.values(CATEGORIES).map((category) => <option value={category} key={category}>{CATEGORY_LABELS[category]}</option>)}</select></label></div><div className="date-picker-field"><label>تاریخ <span className="label-hint">شمسی</span><div className="date-input-wrap"><input value={form.date} onChange={(event) => update('date', event.target.value)} placeholder="۱۴۰۴/۰۱/۰۱" inputMode="numeric" /><button type="button" className="calendar-trigger" aria-label="باز کردن تقویم شمسی" onClick={toggleCalendar}><Icon name="calendar" size={19} /></button></div></label>{calendarOpen && <JalaliCalendar month={calendarMonth} weeks={calendarWeeks} selected={selectedJalali} onMonthChange={(offset) => setCalendarMonth((current) => shiftJalaliMonth(current, offset))} onSelect={chooseCalendarDate} onToday={goToCalendarToday} />}</div><label>توضیحات <span className="label-hint">اختیاری</span><textarea value={form.note} onChange={(event) => update('note', event.target.value)} placeholder="برای یادآوری بیشتر بنویسید..." rows="3" /></label>{error && <p className="form-error">{error}</p>}<div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>انصراف</button><button type="submit" className="primary-button">{expense ? 'ذخیره تغییرات' : 'ثبت هزینه'} <Icon name="plus" size={18} /></button></div></form></section></div>;
+}
+
+function JalaliCalendar({ month, weeks, selected, onMonthChange, onSelect, onToday }) {
+  const weekDays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+  return <div className="jalali-calendar" role="dialog" aria-label="تقویم شمسی">
+    <div className="calendar-header"><button type="button" aria-label="سال قبل" onClick={() => onMonthChange(-12)}><Icon name="chevron" size={18} /></button><button type="button" aria-label="ماه قبل" onClick={() => onMonthChange(-1)}><Icon name="chevron" size={18} /></button><div className="calendar-month-selectors"><select aria-label="انتخاب ماه تقویم" value={month.jm} onChange={(event) => onMonthChange(Number(event.target.value) - month.jm)}>{JALALI_MONTHS.map((monthName, index) => <option value={index + 1} key={monthName}>{monthName}</option>)}</select><select aria-label="انتخاب سال تقویم" value={month.jy} onChange={(event) => onMonthChange((Number(event.target.value) - month.jy) * 12)}>{Array.from({ length: 21 }, (_, index) => month.jy - 10 + index).map((year) => <option value={year} key={year}>{toPersianDigits(year)}</option>)}</select></div><button type="button" aria-label="ماه بعد" onClick={() => onMonthChange(1)}><Icon name="chevron" size={18} /></button><button type="button" aria-label="سال بعد" onClick={() => onMonthChange(12)}><Icon name="chevron" size={18} /></button></div>
+    <div className="calendar-weekdays">{weekDays.map((day) => <span key={day}>{day}</span>)}</div>
+    <div className="calendar-grid">{weeks.flatMap((week) => week).map((day, index) => day ? <button type="button" className={selected && selected.jy === day.jy && selected.jm === day.jm && selected.jd === day.jd ? 'selected' : ''} key={`${day.jy}-${day.jm}-${day.jd}`} onClick={() => onSelect(day)} aria-label={`انتخاب ${toPersianDigits(day.jd)} ${getJalaliMonthLabel(day)}`}>{toPersianDigits(day.jd)}</button> : <span className="calendar-empty" key={`empty-${index}`} />)}</div>
+    <button type="button" className="calendar-today" onClick={onToday}>امروز</button>
+  </div>;
 }
 
 function EmptyState({ text }) { return <div className="empty-state"><span>○</span><p>{text}</p></div>; }

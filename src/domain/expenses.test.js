@@ -5,10 +5,13 @@ import {
   amountInputToToman,
   filterExpenses,
   formatToman,
+  getJalaliCalendarWeeks,
+  getJalaliMonthLabel,
   getMonthKey,
   getMonthSummary,
   normalizeDigits,
   parseJalaliDate,
+  shiftJalaliMonth,
   toJalali,
 } from './expenses.js';
 
@@ -42,6 +45,21 @@ describe('Jalali date helpers', () => {
     expect(() => parseJalaliDate('1404/13/01')).toThrow();
     expect(() => parseJalaliDate('1404/01/32')).toThrow();
   });
+
+  it('builds a complete calendar with Saturday as the first column', () => {
+    const weeks = getJalaliCalendarWeeks(1404, 1);
+    const days = weeks.flat().filter(Boolean);
+    expect(days[0]).toEqual({ jy: 1404, jm: 1, jd: 1 });
+    expect(days.at(-1)).toEqual({ jy: 1404, jm: 1, jd: 31 });
+    expect(weeks.length).toBeGreaterThanOrEqual(5);
+    expect(weeks.every((week) => week.length === 7)).toBe(true);
+  });
+
+  it('shifts calendar months and years correctly', () => {
+    expect(shiftJalaliMonth({ jy: 1404, jm: 1 }, -1)).toEqual({ jy: 1403, jm: 12 });
+    expect(shiftJalaliMonth({ jy: 1404, jm: 12 }, 1)).toEqual({ jy: 1405, jm: 1 });
+    expect(getJalaliMonthLabel({ jy: 1404, jm: 1 })).toBe('فروردین ۱۴۰۴');
+  });
 });
 
 describe('expense summaries and filters', () => {
@@ -74,7 +92,6 @@ it('exports the supported people and categories', () => {
   expect(Object.values(CATEGORIES)).toHaveLength(8);
 });
 
-// Keep a small round-trip guard around the Jalali conversion used by the form.
 it('round-trips the first day of the Persian year', async () => {
   const { jalaliToIso, isoToJalaliString } = await import('./expenses.js');
   expect(isoToJalaliString(jalaliToIso('1404/01/01'))).toBe('1404/01/01');
