@@ -16,9 +16,18 @@ The first random passwords were written to `/root/kharj-negar-initial-credential
 
 ## Backup
 
-The private backup repository is `RakhavanM/kharj-negar-backups`. The systemd timer is installed and enabled, but encrypted uploads remain intentionally disabled until an offline age recipient and a least-privilege GitHub token are installed as:
+The private backup repository is `RakhavanM/kharj-negar-backups`. The backup system is configured for a **weekly Sunday run** via `kharj-negar-backup.timer`, with encrypted GitHub Release assets and seven-release retention.
+
+Upload execution remains gated until these two root-only files are installed on the VPS:
 
 - `/etc/kharj-negar/age-recipient`
 - `/etc/kharj-negar/github-backup-token`
 
-The age private key must remain off-server.
+The age private key must remain off-server. The GitHub token should be fine-grained and restricted to `RakhavanM/kharj-negar-backups` release/content operations only.
+
+The backup service is condition-gated, so it does not run or report a false success while those credentials are absent.
+
+## Feature endpoints
+
+- `POST /api/auth/change-password`
+- `GET /api/summary?month=YYYY-MM` includes `comparison` against the previous Jalali month when data exists.

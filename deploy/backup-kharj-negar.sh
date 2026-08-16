@@ -91,3 +91,5 @@ PY
 
 rm -f "$archive" "$checksum"
 printf 'backup_release=backup-%s\nrepository=https://github.com/%s/releases/tag/backup-%s\n' "$timestamp" "$REPO" "$timestamp"
+
+# The timer uses this script weekly; credentials are intentionally required at runtime.

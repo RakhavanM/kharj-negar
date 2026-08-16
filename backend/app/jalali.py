@@ -70,3 +70,10 @@ def current_month() -> str:
 def month_label(value: str) -> str:
     year, month = parse_month(value)
     return f"{MONTH_NAMES[month - 1]} {year}"
+
+
+def previous_month(value: str) -> str:
+    year, month = parse_month(value)
+    if month == 1:
+        return f"{year - 1}-12"
+    return f"{year}-{month - 1:02d}"

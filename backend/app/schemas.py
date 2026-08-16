@@ -34,6 +34,25 @@ class LoginResponse(BaseModel):
     user: UserResponse
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=256)
+    new_password: str = Field(min_length=12, max_length=256)
+
+
+class ChangePasswordResponse(BaseModel):
+    message: str
+
+
+class ComparisonResponse(BaseModel):
+    available: bool
+    current_total_toman: int
+    previous_total_toman: int | None = None
+    percent: int | None = None
+    direction: Literal["less", "more", "same", "unavailable"]
+    previous_month: str | None = None
+    previous_month_label: str | None = None
+
+
 class ExpensePayload(BaseModel):
     amount_thousands: int = Field(gt=0, le=100_000_000)
     person: Literal["ramin", "mana"]
@@ -76,6 +95,7 @@ class SummaryResponse(BaseModel):
     count: int
     by_person: dict[str, int]
     by_category: dict[str, int]
+    comparison: ComparisonResponse
 
 
 def expense_response(expense) -> ExpenseResponse:

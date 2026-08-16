@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..auth import clear_session, create_session, get_current_session
+from ..auth import clear_session, create_session, get_current_session, get_current_user, require_csrf
 from ..db import get_db
 from ..models import User
 from ..rate_limit import check_login_rate_limit
-from ..schemas import AuthResponse, LoginRequest, LoginResponse, UserResponse
-from ..security import verify_password
+from ..schemas import AuthResponse, ChangePasswordRequest, ChangePasswordResponse, LoginRequest, LoginResponse, UserResponse
+from ..security import hash_password, verify_password
 
 router = APIRouter()
 
@@ -27,6 +27,22 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)) 
     clear_session(response, db, request)
     response.status_code = 204
     return response
+
+
+@router.post("/change-password", response_model=ChangePasswordResponse)
+def change_password(
+    payload: ChangePasswordRequest,
+    user: User = Depends(get_current_user),
+    _: None = Depends(require_csrf),
+    db: Session = Depends(get_db),
+) -> ChangePasswordResponse:
+    if not verify_password(user.password_hash, payload.current_password):
+        raise HTTPException(status_code=400, detail="رمز عبور فعلی نادرست است.")
+    if verify_password(user.password_hash, payload.new_password):
+        raise HTTPException(status_code=400, detail="رمز عبور جدید باید با رمز فعلی متفاوت باشد.")
+    user.password_hash = hash_password(payload.new_password)
+    db.commit()
+    return ChangePasswordResponse(message="رمز عبور با موفقیت تغییر کرد.")
 
 
 @router.get("/me", response_model=AuthResponse)

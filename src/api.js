@@ -34,6 +34,13 @@ export async function apiLogout() {
   return apiRequest('/auth/logout', { method: 'POST' });
 }
 
+export async function apiChangePassword(currentPassword, newPassword) {
+  return apiRequest('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+}
+
 export async function apiListExpenses({ month, person, category, query }) {
   const params = new URLSearchParams({ month });
   if (person && person !== 'all') params.set('person', person);

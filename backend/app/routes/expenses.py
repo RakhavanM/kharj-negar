@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 
 from ..auth import get_current_user, require_csrf
 from ..db import get_db
-from ..jalali import current_month, month_label, month_range, parse_jalali
+from ..jalali import current_month, month_label, month_range, parse_jalali, previous_month
 from ..models import Expense, User
-from ..schemas import ExpenseListResponse, ExpensePayload, ExpenseResponse, SummaryResponse, expense_response
+from ..schemas import ComparisonResponse, ExpenseListResponse, ExpensePayload, ExpenseResponse, SummaryResponse, expense_response
 
 router = APIRouter()
 
@@ -130,6 +130,33 @@ def summary(
     for expense in expenses:
         by_person[expense.person] += expense.amount_toman
         by_category[expense.category] += expense.amount_toman
+    previous_key = previous_month(selected_month)
+    previous_start, previous_end = month_range(previous_key)
+    previous_statement = select(Expense).where(
+        Expense.household_id == user.household_id,
+        Expense.expense_date >= previous_start,
+        Expense.expense_date < previous_end,
+    )
+    if person and person != "all":
+        previous_statement = previous_statement.where(Expense.person == person)
+    if category and category != "all":
+        previous_statement = previous_statement.where(Expense.category == category)
+    if q:
+        previous_statement = previous_statement.where(Expense.note.ilike(f"%{q}%"))
+    previous_expenses = list(db.scalars(previous_statement))
+    previous_total = sum(expense.amount_toman for expense in previous_expenses)
+    current_total = sum(by_person.values())
+    comparison = ComparisonResponse(available=bool(previous_expenses), current_total_toman=current_total, previous_total_toman=previous_total or None, percent=None, direction="unavailable", previous_month=previous_key, previous_month_label=month_label(previous_key))
+    if previous_expenses:
+        if current_total == previous_total:
+            comparison.direction = "same"
+            comparison.percent = 0
+        elif current_total < previous_total:
+            comparison.direction = "less"
+            comparison.percent = round((previous_total - current_total) * 100 / previous_total)
+        else:
+            comparison.direction = "more"
+            comparison.percent = round((current_total - previous_total) * 100 / previous_total)
     return SummaryResponse(
         month=selected_month,
         month_label=month_label(selected_month),
@@ -137,4 +164,5 @@ def summary(
         count=len(expenses),
         by_person=by_person,
         by_category=by_category,
+        comparison=comparison,
     )
