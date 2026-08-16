@@ -25,4 +25,16 @@ describe('system dark mode contract', () => {
     expect(styles).toContain('.bottom-nav {');
     expect(styles).toContain('.password-modal {');
   });
+
+  it('uses a dark foreground on every light-green accent surface', () => {
+    expect(styles).toContain('--on-accent: #163300');
+    expect(styles).toContain('--on-accent: #163300;');
+    expect(styles).toContain('color: var(--on-accent);');
+    expect(styles).toContain('.primary-button,');
+    expect(styles).toContain('.download-button,');
+    expect(styles).toContain('.filter-button.has-filter,');
+    expect(styles).toContain('.brand-mark,');
+    expect(styles).toContain('.profile-button span,');
+    expect(styles).toContain('.insight-mark,');
+  });
 });
