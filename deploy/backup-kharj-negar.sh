@@ -54,7 +54,7 @@ pg_restore --list "$stage/kharj-negar.dump" > "$stage/kharj-negar.dump.list"
 printf 'created_at=%s\nrepository=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$REPO" > "$stage/manifest.txt"
 
 tar --numeric-owner --acls --xattrs -C "$stage" -cf - . | zstd -T0 -10 | age -r "$recipient" -o "$archive"
-sha256sum "$archive" > "$checksum"
+(cd "$(dirname "$archive")" && sha256sum "$(basename "$archive")") > "$checksum"
 
 release=$(python3 - <<PY
 import json
