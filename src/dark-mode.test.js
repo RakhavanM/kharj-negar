@@ -23,7 +23,7 @@ describe('system dark mode contract', () => {
   it('keeps person-card backgrounds and uses dark text in dark mode', () => {
     expect(styles).toContain('.person-card:nth-child(2) { background: #f8fff4; }');
     expect(styles).toContain('.person-card:nth-child(3) { background: #f5faef; }');
-    expect(styles).toContain('--person-card-ink: #163300');
+    expect(styles).toContain('--person-card-ink: #C3FFA3');
     expect(styles).toContain('color: var(--person-card-ink, var(--ink));');
   });
 
@@ -37,6 +37,7 @@ describe('system dark mode contract', () => {
   it('uses a dark foreground on every light-green accent surface', () => {
     expect(styles).toContain('--on-accent: #163300');
     expect(styles).toContain('--on-accent: #163300;');
+    expect(styles).toContain('--muted-light: #CCDBCC;');
     expect(styles).toContain('color: var(--on-accent);');
     expect(styles).toContain('.primary-button,');
     expect(styles).toContain('.download-button,');
@@ -50,9 +51,8 @@ describe('system dark mode contract', () => {
     expect(styles).toContain('.filter-button:hover, .filter-button.has-filter');
   });
 
-  it('removes the obsolete prototype chip from the top bar', () => {
-    expect(mainSource).not.toContain('prototype-chip');
-    expect(mainSource).not.toContain('نسخه اصلی');
-    expect(styles).not.toContain('.prototype-chip');
+  it('does not render a legacy version badge in the top bar', () => {
+    expect(mainSource).not.toMatch(/className=["'][^"']*chip/);
+    expect(styles).not.toMatch(/\.[\w-]*chip\b/);
   });
 });

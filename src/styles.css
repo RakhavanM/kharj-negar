@@ -59,7 +59,7 @@
     --warning: #ffe27a;
     --ink: #f1f7ee;
     --muted: #c0ccc0;
-    --muted-light: #9eab9e;
+    --muted-light: #CCDBCC;
     --line: rgba(226, 246, 213, .14);
     --line-strong: rgba(226, 246, 213, .3);
     --soft-green: rgba(159, 232, 112, .12);
@@ -345,7 +345,7 @@ h2 { color: var(--ink); font-size: 20px; line-height: 1.35; letter-spacing: -.45
 .bottom-nav { display: none; }
 
 @media (prefers-color-scheme: dark) {
-  .person-card { --person-card-ink: #163300; }
+  .person-card { --person-card-ink: #C3FFA3; }
   .month-selector, .month-picker-popover, .jalali-calendar { border-color: var(--line-strong); }
   .password-modal { border-color: var(--line-strong); }
   .password-modal .modal-head { border-bottom-color: var(--line); }
@@ -489,7 +489,7 @@ h2 { color: var(--ink); font-size: 20px; line-height: 1.35; letter-spacing: -.45
   --warning: #ffe27a;
   --ink: #f1f7ee;
   --muted: #c0ccc0;
-  --muted-light: #9eab9e;
+  --muted-light: #CCDBCC;
   --line: rgba(226, 246, 213, .14);
   --line-strong: rgba(226, 246, 213, .3);
   --soft-green: rgba(159, 232, 112, .12);
@@ -512,7 +512,7 @@ h2 { color: var(--ink); font-size: 20px; line-height: 1.35; letter-spacing: -.45
 :root[data-theme="dark"] .topbar { background: rgba(24, 32, 25, .92); }
 :root[data-theme="dark"] .person-card:nth-child(2),
 :root[data-theme="dark"] .person-card:nth-child(3) { background: var(--surface-soft); }
-:root[data-theme="dark"] .person-card { --person-card-ink: #163300; }
+:root[data-theme="dark"] .person-card { --person-card-ink: #C3FFA3; }
 :root[data-theme="dark"] .total-card { background: #254b2c; color: #f1f7ee; }
 :root[data-theme="dark"] .card-kicker,
 :root[data-theme="dark"] .total-card-foot,
