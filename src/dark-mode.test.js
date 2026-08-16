@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const styles = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
+const mainSource = readFileSync(resolve(process.cwd(), 'src/main.jsx'), 'utf8');
 
 describe('system dark mode contract', () => {
   it('uses semantic root colors so dark mode reaches inherited text', () => {
@@ -47,5 +48,11 @@ describe('system dark mode contract', () => {
     expect(styles).toContain('.download-button:hover');
     expect(styles).toContain('.calendar-trigger:hover');
     expect(styles).toContain('.filter-button:hover, .filter-button.has-filter');
+  });
+
+  it('removes the obsolete prototype chip from the top bar', () => {
+    expect(mainSource).not.toContain('prototype-chip');
+    expect(mainSource).not.toContain('نسخه اصلی');
+    expect(styles).not.toContain('.prototype-chip');
   });
 });
