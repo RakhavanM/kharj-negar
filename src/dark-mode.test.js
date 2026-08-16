@@ -5,6 +5,13 @@ import { describe, expect, it } from 'vitest';
 const styles = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
 
 describe('system dark mode contract', () => {
+  it('uses semantic root colors so dark mode reaches inherited text', () => {
+    const rootBlock = styles.match(/^:root \{([\s\S]*?)^\}/m)?.[1] || '';
+    expect(rootBlock).toContain('color: var(--ink);');
+    expect(rootBlock).toContain('background: var(--canvas);');
+    expect(styles).toContain(':root[data-theme="dark"] .person-card');
+  });
+
   it('defines an automatic dark palette and browser color scheme', () => {
     expect(styles).toContain('@media (prefers-color-scheme: dark)');
     expect(styles).toContain('color-scheme: dark');
@@ -37,5 +44,8 @@ describe('system dark mode contract', () => {
     expect(styles).toContain('.profile-button span,');
     expect(styles).toContain('.insight-mark,');
     expect(styles).toContain('.theme-toggle {');
+    expect(styles).toContain('.download-button:hover');
+    expect(styles).toContain('.calendar-trigger:hover');
+    expect(styles).toContain('.filter-button:hover, .filter-button.has-filter');
   });
 });
