@@ -12,3 +12,5 @@ backend/.env
 backend/.env.*
 !backend/.env.example
 *.dump
+backend/build/
+backend/*.egg-info/
