@@ -187,6 +187,7 @@ h2 { color: var(--ink); font-size: 20px; line-height: 1.35; letter-spacing: -.45
 
 .toast { position: fixed; z-index: 60; right: 50%; bottom: 27px; transform: translateX(50%); color: var(--dark-green); background: var(--wise-green); border-radius: var(--pill); padding: 12px 19px; font-size: 12px; font-weight: 700; box-shadow: var(--shadow-float); }
 .toast.info { color: var(--ink); background: var(--surface); box-shadow: var(--shadow-float); }
+.server-error { color: var(--danger); background: #fdebea; }
 
 .login-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--dark-green); }
 .login-card { width: min(100%, 410px); padding: 42px 35px 27px; text-align: center; background: var(--surface); border-radius: var(--radius-xl); box-shadow: 0 16px 50px rgba(0, 0, 0, .18); }

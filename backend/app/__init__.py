@@ -1,0 +1,1 @@
+"""Kharj Negar API application."""

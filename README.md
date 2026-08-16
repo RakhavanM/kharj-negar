@@ -4,58 +4,109 @@
 
 ## نسخه‌ها
 
-- **v0.1** — نسخه اولیه با visual language سبز و warm minimal؛ در release تگ `v0.1` ثبت شده است.
+- **v0.1** — نسخه اولیه با visual language سبز و warm minimal.
 - **v0.2** — بازطراحی آزمایشی با design language الهام‌گرفته از Uber.
-- **v0.3** — بازطراحی فعلی با design language الهام‌گرفته از Wise: زمینه گرم و روشن، Wise Green، Dark Green، کارت‌های بزرگ و گوشه‌گرد، کنترل‌های pill و سلسله‌مراتب تایپوگرافی قوی.
+- **v0.3** — بازطراحی با design language الهام‌گرفته از Wise.
+- **v0.4** — اتصال نسخه production به backend امن، PostgreSQL و دامنه اختصاصی.
 
-نسخه فعلی همچنان از فونت **Vazirmatn** استفاده می‌کند تا تجربه فارسی یکدست بماند. منظور از الهام‌گرفتن، استفاده از اصول بصری عمومی و نقش‌های رنگی است، نه کپی لوگو، asset یا صفحه اختصاصی Wise.
+نسخه فعلی از فونت **Vazirmatn** استفاده می‌کند و ظاهر Wise-inspired آن را برای تجربه فارسی حفظ می‌کند.
 
-## وضعیت فعلی
+## نسخه‌های قابل مشاهده
 
-این مرحله یک prototype قابل مشاهده روی GitHub Pages است و شامل موارد زیر می‌شود:
+- Demo و GitHub Pages: https://rakhavanm.github.io/kharj-negar/
+- Production: https://kharjnegar.raminakhavan.ir/
 
-- رابط راست‌چین با فونت Vazirmatn
-- ورود آزمایشی با دو کاربر `ramin` و `mana`
+## امکانات
+
+- ورود جداگانه برای `ramin` و `mana`
+- فضای مشترک خانوادگی با دیتابیس مشترک
 - ثبت، ویرایش و حذف هزینه
 - مبلغ بر اساس هزار تومان؛ برای نمونه `500` یعنی `500,000 تومان`
-- دسته‌بندی‌ها و فرد خرج‌کننده
 - تاریخ شمسی و محاسبه ماه بر مبنای تقویم جلالی
 - فیلد توضیحات اختیاری
 - داشبورد ماهانه، تفکیک افراد و دسته‌بندی‌ها
-- فیلتر فرد، دسته‌بندی و جست‌وجوی توضیحات
-- نسخه responsive برای موبایل
-- ذخیره موقت در localStorage مرورگر
-- workflow تست و انتشار خودکار GitHub Pages
+- فیلتر فرد، دسته‌بندی، ماه و جست‌وجوی توضیحات
+- responsive برای موبایل
+- احراز هویت واقعی و session امن در نسخه production
+- API با FastAPI و PostgreSQL
+- اجرای backend با systemd و reverse proxy با Nginx
 
-## محدودیت مهم prototype
+## وضعیت Demo و Production
 
-GitHub Pages فقط فایل‌های استاتیک را میزبانی می‌کند. بنابراین در این مرحله ورود و ذخیره‌سازی **واقعاً امن و مشترک بین دستگاه‌ها** پیاده‌سازی نشده است؛ داده‌ها فقط در همان مرورگری ذخیره می‌شوند که سایت در آن باز شده است. برای استفاده واقعی، بعد از نهایی شدن UI و جریان محصول، backend، دیتابیس، احراز هویت امن و پشتیبان‌گیری روی VPS اضافه خواهد شد.
+### GitHub Pages
 
-## اجرای محلی
+GitHub Pages نسخه demo را نگه می‌دارد. در این نسخه داده‌ها فقط در همان مرورگر و در `localStorage` ذخیره می‌شوند و برای اطلاعات مالی واقعی مناسب نیست. برای ورود به demo، نام کاربری `ramin` یا `mana` و هر رمز غیرخالی قابل استفاده است.
+
+### Production
+
+نسخه production روی دامنه اختصاصی اجرا می‌شود و داده‌ها بین دستگاه‌ها مشترک هستند:
+
+```text
+https://kharjnegar.raminakhavan.ir
+```
+
+در production:
+
+- frontend از build استاتیک سرو می‌شود.
+- API پشت مسیر `/api/` قرار دارد.
+- backend فقط روی `127.0.0.1:8000` گوش می‌دهد.
+- PostgreSQL فقط روی localhost قابل دسترسی است.
+- رمزها با Argon2id ذخیره می‌شوند.
+- session و CSRF cookie فعال هستند.
+- endpointهای مستندات FastAPI در production غیرفعال هستند.
+
+## ساختار backend
+
+```text
+backend/
+  app/
+    auth.py
+    bootstrap.py
+    config.py
+    db.py
+    jalali.py
+    main.py
+    models.py
+    rate_limit.py
+    routes/
+    schemas.py
+    security.py
+  migrations/
+  tests/
+deploy/
+  kharj-negar-api.service
+  kharjnegar.nginx.conf
+  backup-kharj-negar.sh
+```
+
+## اجرای محلی frontend
 
 ```bash
 npm install
 npm run dev
 ```
 
-## بررسی کیفیت
+## اجرای تست‌ها
 
 ```bash
 npm test
 npm run build
+backend/.venv/bin/pytest backend/tests -q
 ```
 
-## انتشار
+## استقرار
 
-با هر push به شاخه `main`، GitHub Actions تست‌ها را اجرا می‌کند، پروژه را build می‌کند و آن را روی GitHub Pages منتشر می‌کند.
+جزئیات مسیرهای VPS، سرویس systemd، Nginx و backup در `deploy/README.md` قرار دارد. secretها و رمزهای production در Git قرار نمی‌گیرند.
 
-## تصمیم‌های مرحله بعد
+## Backup
 
-- مقایسه نسخه v0.1، v0.2 و v0.3 و انتخاب direction نهایی
-- تأیید یا اصلاح طراحی و جریان ثبت هزینه
-- تبدیل ورود آزمایشی به احراز هویت واقعی
-- انتقال ذخیره‌سازی از localStorage به API و PostgreSQL روی VPS
-- اتصال دامنه و SSL پس از انتقال به سرور
+یک ریپازیتوری خصوصی برای backupهای رمزنگاری‌شده ایجاد شده است:
+
+```text
+RakhavanM/kharj-negar-backups
+```
+
+timer روزانه نصب شده، اما upload به GitHub Release تا زمان نصب age recipient و GitHub token محدود به همان repository فعال نشده است.
 
 ## License
 

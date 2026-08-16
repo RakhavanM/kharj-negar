@@ -1,10 +1,23 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource/vazirmatn/400.css';
 import '@fontsource/vazirmatn/500.css';
 import '@fontsource/vazirmatn/600.css';
 import '@fontsource/vazirmatn/700.css';
 import './styles.css';
+import {
+  apiCreateExpense,
+  apiDeleteExpense,
+  apiExpenseToLocal,
+  apiListExpenses,
+  apiLogin,
+  apiLogout,
+  apiMe,
+  apiSummary,
+  apiUpdateExpense,
+  isProductionHost,
+  productionPayload,
+} from './api.js';
 import {
   CATEGORIES,
   CATEGORY_ICONS,
@@ -89,6 +102,7 @@ function getCurrentMonth() {
 }
 
 function App() {
+  const production = isProductionHost();
   const [session, setSession] = usePersistentState(SESSION_KEY, null);
   const [expenses, setExpenses] = usePersistentState(STORAGE_KEY, DEMO_EXPENSES);
   const [activeView, setActiveView] = useState('dashboard');
@@ -99,23 +113,84 @@ function App() {
   const [showFilters, setShowFilters] = useState(false);
   const [toast, setToast] = useState(null);
   const [previewMode, setPreviewMode] = useState(false);
+  const [loading, setLoading] = useState(production);
+  const [serverData, setServerData] = useState({ expenses: [], summary: null });
+  const [serverError, setServerError] = useState('');
 
   const notify = (message, type = 'success') => {
     setToast({ message, type });
     window.setTimeout(() => setToast(null), 2800);
   };
 
-  const visibleExpenses = previewMode ? PREVIEW_EXPENSES : expenses;
-  const filteredExpenses = useMemo(() => sortExpenses(filterExpenses(visibleExpenses, { month: selectedMonth, ...filters })), [visibleExpenses, selectedMonth, filters]);
-  const summary = useMemo(() => getMonthSummary(visibleExpenses, selectedMonth, filters), [visibleExpenses, selectedMonth, filters]);
+  useEffect(() => {
+    if (!production) return;
+    let active = true;
+    apiMe()
+      .then((response) => {
+        if (!active) return;
+        if (response.authenticated) setSession(response.user);
+        else setSession(null);
+      })
+      .catch(() => active && setServerError('ارتباط با سرور برقرار نشد.'))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
+  }, [production]);
 
-  if (!session) return <LoginScreen onLogin={(person) => setSession({ person, loggedAt: Date.now() })} />;
+  useEffect(() => {
+    if (!production || !session) return;
+    let active = true;
+    setLoading(true);
+    Promise.all([
+      apiListExpenses({ month: selectedMonth, ...filters }),
+      apiSummary({ month: selectedMonth, ...filters }),
+    ])
+      .then(([list, nextSummary]) => {
+        if (!active) return;
+        setServerData({ expenses: list.items.map(apiExpenseToLocal), summary: nextSummary });
+        setServerError('');
+      })
+      .catch((error) => active && setServerError(error.message))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
+  }, [production, session, selectedMonth, filters]);
+
+  const visibleExpenses = previewMode ? PREVIEW_EXPENSES : expenses;
+  const localFilteredExpenses = useMemo(() => sortExpenses(filterExpenses(visibleExpenses, { month: selectedMonth, ...filters })), [visibleExpenses, selectedMonth, filters]);
+  const localSummary = useMemo(() => getMonthSummary(visibleExpenses, selectedMonth, filters), [visibleExpenses, selectedMonth, filters]);
+  const filteredExpenses = production ? serverData.expenses : localFilteredExpenses;
+  const summary = production ? (serverData.summary ? {
+    total: serverData.summary.total_toman,
+    count: serverData.summary.count,
+    byPerson: serverData.summary.by_person,
+    byCategory: serverData.summary.by_category,
+  } : { total: 0, count: 0, byPerson: { ramin: 0, mana: 0 }, byCategory: Object.fromEntries(Object.values(CATEGORIES).map((category) => [category, 0])) }) : localSummary;
+
+  if (loading && production && !session) return <LoadingScreen />;
+  if (!session) return <LoginScreen production={production} onLogin={async (username, password) => {
+    if (!production) { setSession({ person: username, loggedAt: Date.now() }); return; }
+    try {
+      const user = await apiLogin(username, password);
+      setSession(user);
+      setServerError('');
+    } catch (error) { throw error; }
+  }} />;
 
   const monthOptions = getMonthOptions(selectedMonth);
 
   const openAdd = () => { setEditingExpense(null); setFormOpen(true); };
   const openEdit = (expense) => { setEditingExpense(expense); setFormOpen(true); };
   const saveExpense = (form) => {
+    if (production) {
+      const request = editingExpense ? apiUpdateExpense(editingExpense.serverId || editingExpense.id, productionPayload(form)) : apiCreateExpense(productionPayload(form));
+      request.then((saved) => {
+        setServerData((current) => ({ ...current, expenses: editingExpense ? current.expenses.map((item) => item.id === String(saved.id) ? apiExpenseToLocal(saved) : item) : [apiExpenseToLocal(saved), ...current.expenses] }));
+        setFormOpen(false);
+        setEditingExpense(null);
+        setSelectedMonth(getMonthKey(form.date));
+        notify(editingExpense ? 'هزینه ویرایش شد.' : 'هزینه ثبت شد.');
+      }).catch((error) => notify(error.message, 'info'));
+      return;
+    }
     if (editingExpense) {
       setExpenses((current) => current.map((expense) => expense.id === editingExpense.id ? { ...editingExpense, ...form } : expense));
       notify('هزینه ویرایش شد.');
@@ -129,6 +204,12 @@ function App() {
   };
   const deleteExpense = (expense) => {
     if (!window.confirm('این هزینه حذف شود؟')) return;
+    if (production) {
+      apiDeleteExpense(expense.serverId || expense.id)
+        .then(() => { setServerData((current) => ({ ...current, expenses: current.expenses.filter((item) => item.id !== expense.id) })); notify('هزینه حذف شد.', 'info'); })
+        .catch((error) => notify(error.message, 'info'));
+      return;
+    }
     setExpenses((current) => current.filter((item) => item.id !== expense.id));
     notify('هزینه حذف شد.', 'info');
   };
@@ -141,8 +222,8 @@ function App() {
           <div><strong>خرج‌نگار</strong><small>هزینه‌های خونه</small></div>
         </div>
         <div className="topbar-actions">
-          <span className="prototype-chip">نسخه آزمایشی</span>
-          <button className="profile-button" onClick={() => setSession(null)} title="خروج از حساب"><span>{PERSON_LABELS[session.person][0]}</span><Icon name="logout" size={17} /></button>
+          <span className="prototype-chip">{production ? 'نسخه اصلی' : 'نسخه آزمایشی'}</span>
+          <button className="profile-button" onClick={async () => { if (production) await apiLogout(); setSession(null); }} title="خروج از حساب"><span>{PERSON_LABELS[session.person][0]}</span><Icon name="logout" size={17} /></button>
         </div>
       </header>
 
@@ -156,7 +237,8 @@ function App() {
           <button className="primary-button desktop-add" onClick={openAdd}><Icon name="plus" size={20} />ثبت هزینه جدید</button>
         </section>
 
-        <div className="prototype-note"><Icon name="lock" size={17} /><span>این نسخه برای بررسی محصول روی GitHub Pages است؛ داده‌ها فعلاً فقط در همین مرورگر ذخیره می‌شوند.</span><button onClick={() => setPreviewMode((mode) => !mode)}>{previewMode ? 'داده‌های من' : 'نمایش نمونه'}</button></div>
+        <div className="prototype-note"><Icon name="lock" size={17} /><span>{production ? 'داده‌ها به‌صورت امن روی سرور مشترک ذخیره می‌شوند.' : 'این نسخه برای بررسی محصول روی GitHub Pages است؛ داده‌ها فعلاً فقط در همین مرورگر ذخیره می‌شوند.'}</span>{!production && <button onClick={() => setPreviewMode((mode) => !mode)}>{previewMode ? 'داده‌های من' : 'نمایش نمونه'}</button>}</div>
+        {serverError && production && <div className="prototype-note server-error"><Icon name="close" size={17} /><span>{serverError}</span></div>}
 
         <section className="month-toolbar">
           <div className="month-selector">
@@ -200,18 +282,30 @@ function App() {
   );
 }
 
-function LoginScreen({ onLogin }) {
+function LoginScreen({ production, onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const submit = (event) => {
+  const [submitting, setSubmitting] = useState(false);
+  const submit = async (event) => {
     event.preventDefault();
     const normalized = normalizeDigits(username).trim().toLowerCase();
     if (!['ramin', 'مانا', 'mana'].includes(normalized)) { setError('نام کاربری باید ramin یا mana باشد.'); return; }
     if (password.trim().length < 1) { setError('رمز عبور را وارد کنید.'); return; }
-    onLogin(normalized === 'ramin' ? PEOPLE.ramin : PEOPLE.mana);
+    setSubmitting(true);
+    try {
+      await onLogin(normalized === 'ramin' ? PEOPLE.ramin : PEOPLE.mana, password);
+    } catch (loginError) {
+      setError(loginError.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
-  return <main className="login-page"><div className="login-card"><div className="login-brand"><div className="brand-mark large"><span>خ</span></div><p className="eyebrow">مدیریت هزینه‌های مشترک</p><h1>خرج‌نگار</h1><p className="muted">هزینه‌های خانه را ساده و مرتب کنار هم ببینید.</p></div><form onSubmit={submit} className="login-form"><label>نام کاربری<input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="ramin یا mana" autoComplete="username" /></label><label>رمز عبور<input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="رمز عبور" type="password" autoComplete="current-password" /></label>{error && <p className="form-error">{error}</p>}<button className="primary-button full" type="submit">ورود به خرج‌نگار <Icon name="chevron" size={18} /></button></form><p className="login-hint"><Icon name="lock" size={15} />نسخه آزمایشی: هر نام کاربری با هر رمز غیرخالی پذیرفته می‌شود.</p></div></main>;
+  return <main className="login-page"><div className="login-card"><div className="login-brand"><div className="brand-mark large"><span>خ</span></div><p className="eyebrow">مدیریت هزینه‌های مشترک</p><h1>خرج‌نگار</h1><p className="muted">هزینه‌های خانه را ساده و مرتب کنار هم ببینید.</p></div><form onSubmit={submit} className="login-form"><label>نام کاربری<input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="ramin یا mana" autoComplete="username" /></label><label>رمز عبور<input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="رمز عبور" type="password" autoComplete="current-password" /></label>{error && <p className="form-error">{error}</p>}<button className="primary-button full" type="submit" disabled={submitting}>{submitting ? 'در حال ورود...' : 'ورود به خرج‌نگار'} <Icon name="chevron" size={18} /></button></form><p className="login-hint"><Icon name="lock" size={15} />{production ? 'ورود امن با حساب مشترک شما' : 'نسخه آزمایشی: هر نام کاربری با هر رمز غیرخالی پذیرفته می‌شود.'}</p></div></main>;
+}
+
+function LoadingScreen() {
+  return <main className="login-page"><div className="login-card"><div className="brand-mark large"><span>خ</span></div><p className="eyebrow">خرج‌نگار</p><h1>در حال آماده‌سازی...</h1><p className="muted">اتصال امن به حساب شما</p></div></main>;
 }
 
 function PersonCard({ label, color, amount, total }) {
