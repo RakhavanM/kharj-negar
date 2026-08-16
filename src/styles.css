@@ -44,7 +44,6 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --card-ink: #10200f;
     --canvas: #101510;
     --surface: #182019;
     --surface-soft: #202b21;
@@ -80,11 +79,7 @@
   .topbar { background: rgba(24, 32, 25, .92); }
   .prototype-chip, .prototype-note { color: #d8f6c7; }
   .person-card:nth-child(2), .person-card:nth-child(3) { background: var(--surface-soft); }
-  .total-card { background: #254b2c; color: var(--ink); }
-  .card-kicker, .total-card-foot, .total-card .card-unit { color: rgba(241, 247, 238, .78); }
-  .total-card > strong, .trend { color: var(--wise-green); }
   .primary-button, .download-button, .filter-button, .section-tabs button.active, .month-picker-grid button.selected, .calendar-grid button.selected { color: #10200f; }
-  .brand-mark, .profile-button span, .avatar, .insight-mark { color: #10200f; }
   .login-page { background: #0b110c; }
   .modal-backdrop { background: var(--modal-backdrop); }
   .password-modal { background: linear-gradient(145deg, #1d2b1f 0%, #162219 100%); }
@@ -214,12 +209,12 @@ h2 { color: var(--ink); font-size: 20px; line-height: 1.35; letter-spacing: -.45
 .person-card { min-height: 188px; padding: 24px 22px 19px; background: var(--surface); }
 .person-card:nth-child(2) { background: #f8fff4; }
 .person-card:nth-child(3) { background: #f5faef; }
-.person-card-head { gap: 8px; color: var(--ink); font-size: 13px; font-weight: 600; }
+.person-card-head { gap: 8px; color: var(--person-card-ink, var(--ink)); font-size: 13px; font-weight: 600; }
 .avatar { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 50%; font-size: 12px; font-weight: 700; }
 .avatar.blue { color: var(--dark-green); background: var(--wise-green); }
 .avatar.green { color: var(--dark-green); background: var(--mint); }
 .person-percent { margin-right: auto; color: var(--muted); font-size: 11px; font-weight: 500; }
-.person-card > strong { display: inline-block; margin-top: 28px; color: var(--ink); font-size: 27px; letter-spacing: -1px; font-weight: 800; }
+.person-card > strong { display: inline-block; margin-top: 28px; color: var(--person-card-ink, var(--ink)); font-size: 27px; letter-spacing: -1px; font-weight: 800; }
 .person-card .card-unit { margin-right: 5px; }
 .progress-track { height: 7px; margin-top: 21px; overflow: hidden; background: rgba(22, 51, 0, .08); border-radius: var(--pill); }
 .progress-track span, .category-bar span { display: block; height: 100%; border-radius: inherit; transition: width .3s ease; }
@@ -344,6 +339,7 @@ h2 { color: var(--ink); font-size: 20px; line-height: 1.35; letter-spacing: -.45
 .bottom-nav { display: none; }
 
 @media (prefers-color-scheme: dark) {
+  .person-card { --person-card-ink: #163300; }
   .month-selector, .month-picker-popover, .jalali-calendar { border-color: var(--line-strong); }
   .password-modal { border-color: var(--line-strong); }
   .password-modal .modal-head { border-bottom-color: var(--line); }

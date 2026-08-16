@@ -12,6 +12,13 @@ describe('system dark mode contract', () => {
     expect(styles).toContain('--surface: #182019');
   });
 
+  it('keeps person-card backgrounds and uses dark text in dark mode', () => {
+    expect(styles).toContain('.person-card:nth-child(2) { background: #f8fff4; }');
+    expect(styles).toContain('.person-card:nth-child(3) { background: #f5faef; }');
+    expect(styles).toContain('--person-card-ink: #163300');
+    expect(styles).toContain('color: var(--person-card-ink, var(--ink));');
+  });
+
   it('defines readable dark-mode chart colors and key surface overrides', () => {
     expect(styles).toContain('--chart-1:');
     expect(styles).toContain('.total-card {');
