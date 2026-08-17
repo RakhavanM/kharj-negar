@@ -22,4 +22,11 @@ describe('top-level section navigation', () => {
     expect(source).toContain('Dashboard');
     expect(styles).toContain('.top-level-tabs');
   });
+
+  it('does not keep a savings tab inside the expenses section tabs', () => {
+    const sectionTabs = source.match(/<div className="section-tabs"[\s\S]*?<\/div>/)?.[0] || '';
+    expect(sectionTabs).toContain('نمای کلی');
+    expect(sectionTabs).toContain('همه هزینه‌ها');
+    expect(sectionTabs).not.toContain('پس‌اندازها');
+  });
 });
