@@ -17,3 +17,6 @@ backend/*.egg-info/
 **/__pycache__/
 *.py[cod]
 .pytest_cache/
+# Local production/build tooling and generated deploy state
+.playwright/
+*.local

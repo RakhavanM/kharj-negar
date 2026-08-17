@@ -18,7 +18,8 @@ describe('brand asset contract', () => {
   it('references the logo in the app and favicon in the document', () => {
     expect(indexHtml).toContain('rel="icon"');
     expect(indexHtml).toContain('./favicon-pencil-v2.png');
-    expect(readFileSync(resolve(root, 'src/main.jsx'), 'utf8')).toContain("BRAND_LOGO_PATH = '/logo.png'");
+    expect(indexHtml).toContain('./manifest.webmanifest');
+    expect(readFileSync(resolve(root, 'src/main.jsx'), 'utf8')).toContain("new URL('logo.png', import.meta.env.BASE_URL)");
   });
 
   it('declares installable logo icons in the manifest', () => {

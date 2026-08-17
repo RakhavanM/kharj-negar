@@ -1,6 +1,6 @@
 # خرج‌نگار
 
-وب‌اپلیکیشن فارسی و موبایل‌فرندلی برای ثبت هزینه‌های مشترک رامین و مانا.
+وب‌اپلیکیشن فارسی و موبایل‌فرندلی برای مدیریت هزینه‌ها و دارایی‌های مشترک رامین و مانا.
 
 ## نسخه‌ها
 
@@ -8,6 +8,7 @@
 - **v0.2** — بازطراحی آزمایشی با design language الهام‌گرفته از Uber.
 - **v0.3** — بازطراحی با design language الهام‌گرفته از Wise.
 - **v0.4** — اتصال نسخه production به backend امن، PostgreSQL و دامنه اختصاصی.
+- **Savings assets** — بخش مستقل ثبت موجودی دارایی‌ها، جدا از domain هزینه‌ها.
 
 نسخه فعلی از فونت **Vazirmatn** استفاده می‌کند و ظاهر Wise-inspired آن را برای تجربه فارسی حفظ می‌کند.
 
@@ -16,10 +17,12 @@
 - Demo و GitHub Pages: https://rakhavanm.github.io/kharj-negar/
 - Production: https://kharjnegar.raminakhavan.ir/
 
+GitHub Pages صرفاً برای مشاهده رابط کاربری و رفتار demo است. داده‌های آن در localStorage همان مرورگر ذخیره می‌شوند و برای اطلاعات مالی واقعی مناسب نیستند.
+
 ## امکانات
 
 - ورود جداگانه برای `ramin` و `mana`
-- فضای مشترک خانوادگی با دیتابیس مشترک
+- فضای مشترک خانوادگی با دیتابیس مشترک در production
 - ثبت، ویرایش و حذف هزینه
 - مبلغ بر اساس هزار تومان؛ برای نمونه `500` یعنی `500,000 تومان`
 - تاریخ شمسی و محاسبه ماه بر مبنای تقویم جلالی
@@ -30,12 +33,21 @@
 - احراز هویت واقعی و session امن در نسخه production
 - API با FastAPI و PostgreSQL
 - اجرای backend با systemd و reverse proxy با Nginx
+- بخش مستقل «پس‌اندازها» برای ثبت موجودی دارایی‌ها
+- پشتیبانی از پول نقد، رمزارز، طلا و سایر دارایی‌ها
+- مقدارهای اعشاری مانند `0.5 BTC` و `3.25 گرم`
+- مالک دارایی: رامین، مانا یا مشترک
 
 ## وضعیت Demo و Production
 
 ### GitHub Pages
 
-GitHub Pages نسخه demo را نگه می‌دارد. در این نسخه داده‌ها فقط در همان مرورگر و در `localStorage` ذخیره می‌شوند و برای اطلاعات مالی واقعی مناسب نیست. برای ورود به demo، نام کاربری `ramin` یا `mana` و هر رمز غیرخالی قابل استفاده است.
+GitHub Pages نسخه demo است. در این نسخه:
+
+- احراز هویت فقط نمایشی است.
+- داده‌های هزینه و پس‌انداز در localStorage همان مرورگر ذخیره می‌شوند.
+- برای ورود، نام کاربری `ramin` یا `mana` و هر رمز غیرخالی قابل استفاده است.
+- اطلاعات این نسخه به production منتقل نمی‌شود.
 
 ### Production
 
@@ -54,6 +66,7 @@ https://kharjnegar.raminakhavan.ir
 - رمزها با Argon2id ذخیره می‌شوند.
 - session و CSRF cookie فعال هستند.
 - endpointهای مستندات FastAPI در production غیرفعال هستند.
+- بخش پس‌انداز در جدول مستقل `savings_assets` ذخیره می‌شود و در summary هزینه‌ها وارد نمی‌شود.
 
 ## ساختار backend
 
@@ -72,7 +85,7 @@ backend/
     schemas.py
     security.py
   migrations/
-  tests/
+    versions/
 deploy/
   kharj-negar-api.service
   kharjnegar.nginx.conf
@@ -100,13 +113,11 @@ backend/.venv/bin/pytest backend/tests -q
 
 ## Backup
 
-یک ریپازیتوری خصوصی برای backupهای رمزنگاری‌شده ایجاد شده است:
+یک repository خصوصی جدا برای backupهای رمزنگاری‌شده استفاده می‌شود:
 
 ```text
 RakhavanM/kharj-negar-backups
 ```
-
-timer روزانه نصب شده، اما upload به GitHub Release تا زمان نصب age recipient و GitHub token محدود به همان repository فعال نشده است.
 
 ## License
 

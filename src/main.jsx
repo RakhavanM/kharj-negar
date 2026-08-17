@@ -7,7 +7,7 @@ import '@fontsource/vazirmatn/700.css';
 import './styles.css';
 
 const DOWNLOAD_CONFIRMATION_LABEL = 'دانلود خروجی Excel';
-const BRAND_LOGO_PATH = '/logo.png';
+const BRAND_LOGO_PATH = new URL('logo.png', import.meta.env.BASE_URL).toString();
 import { applyTheme, getEffectiveTheme, getSystemTheme, nextTheme, readThemePreference, saveThemePreference, THEME_STORAGE_KEY } from './theme.js';
 import {
   apiChangePassword,
