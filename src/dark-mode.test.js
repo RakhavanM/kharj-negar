@@ -43,7 +43,7 @@ describe('system dark mode contract', () => {
     expect(styles).toContain('.download-button,');
     expect(styles).toContain('.filter-button.has-filter,');
     expect(styles).toContain('.brand-mark,');
-    expect(styles).toContain('.profile-button span,');
+    expect(styles).toContain('.profile-button, .logout-button');
     expect(styles).toContain('.insight-mark,');
     expect(styles).toContain('.theme-toggle {');
     expect(styles).toContain('.download-button:hover');
