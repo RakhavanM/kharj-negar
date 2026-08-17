@@ -69,6 +69,46 @@ export async function apiDeleteExpense(id) {
   return apiRequest(`/expenses/${id}`, { method: 'DELETE' });
 }
 
+export async function apiListSavingsAssets() {
+  return apiRequest('/savings/assets');
+}
+
+export async function apiCreateSavingsAsset(payload) {
+  return apiRequest('/savings/assets', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function apiUpdateSavingsAsset(id, payload) {
+  return apiRequest(`/savings/assets/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+
+export async function apiDeleteSavingsAsset(id) {
+  return apiRequest(`/savings/assets/${id}`, { method: 'DELETE' });
+}
+
+export function apiSavingsAssetToLocal(asset) {
+  return {
+    ...asset,
+    id: String(asset.id),
+    serverId: asset.id,
+    assetType: asset.asset_type,
+    asOfJalaliDate: asset.as_of_jalali_date,
+    quantity: String(asset.quantity),
+  };
+}
+
+export function savingsProductionPayload(form) {
+  return {
+    asset_type: form.assetType,
+    symbol: form.symbol,
+    title: form.title,
+    quantity: form.quantity,
+    unit: form.unit,
+    owner: form.owner,
+    as_of_jalali_date: form.asOfJalaliDate,
+    note: form.note || '',
+  };
+}
+
 export async function apiDownloadExport() {
   const response = await fetch(`${API_PREFIX}/export/xlsx`, { credentials: 'include' });
   if (!response.ok) {

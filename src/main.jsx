@@ -16,6 +16,12 @@ import {
   apiDeleteExpense,
   apiExpenseToLocal,
   apiListExpenses,
+  apiListSavingsAssets,
+  apiCreateSavingsAsset,
+  apiUpdateSavingsAsset,
+  apiDeleteSavingsAsset,
+  apiSavingsAssetToLocal,
+  savingsProductionPayload,
   apiLogin,
   apiLogout,
   apiMe,
@@ -24,6 +30,15 @@ import {
   isProductionHost,
   productionPayload,
 } from './api.js';
+import {
+  SAVINGS_ASSET_ICONS,
+  SAVINGS_ASSET_TYPES,
+  SAVINGS_ASSET_TYPE_LABELS,
+  SAVINGS_OWNER_LABELS,
+  SAVINGS_OWNERS,
+  formatSavingsQuantity,
+  validateSavingsQuantity,
+} from './domain/savings.js';
 import {
   CATEGORIES,
   CATEGORY_ICONS,
@@ -55,7 +70,14 @@ import {
 
 const STORAGE_KEY = 'kharj-negar-expenses-v1';
 const SESSION_KEY = 'kharj-negar-session-v1';
+const SAVINGS_KEY = 'kharj-negar-savings-v1';
 const DEMO_EXPENSES = [];
+const DEMO_SAVINGS = [
+  { id: 'saving-demo-1', assetType: SAVINGS_ASSET_TYPES.crypto, symbol: 'USDT', title: 'تتر', quantity: '100', unit: 'USDT', owner: SAVINGS_OWNERS.shared, asOfJalaliDate: '1405/05/26', note: '' },
+  { id: 'saving-demo-2', assetType: SAVINGS_ASSET_TYPES.crypto, symbol: 'BTC', title: 'بیت‌کوین', quantity: '0.5', unit: 'BTC', owner: SAVINGS_OWNERS.ramin, asOfJalaliDate: '1405/05/26', note: '' },
+  { id: 'saving-demo-3', assetType: SAVINGS_ASSET_TYPES.cash, symbol: 'TOMAN', title: 'پول نقد', quantity: '100000000', unit: 'تومان', owner: SAVINGS_OWNERS.shared, asOfJalaliDate: '1405/05/26', note: '' },
+  { id: 'saving-demo-4', assetType: SAVINGS_ASSET_TYPES.gold, symbol: 'GOLD', title: 'طلا', quantity: '3', unit: 'گرم', owner: SAVINGS_OWNERS.mana, asOfJalaliDate: '1405/05/26', note: '' },
+];
 const PREVIEW_EXPENSES = [
   { id: 'preview-1', amountToman: 420_000, person: PEOPLE.ramin, category: CATEGORIES.daily, date: '2025-03-21', note: 'خرید روزمره', createdAt: '2025-03-24T10:30:00.000Z' },
   { id: 'preview-2', amountToman: 1_200_000, person: PEOPLE.mana, category: CATEGORIES.pet, date: '2025-03-22', note: 'غذای پت', createdAt: '2025-03-23T15:10:00.000Z' },
@@ -102,6 +124,7 @@ function Icon({ name, size = 20 }) {
     close: <><path d="m6 6 12 12M18 6 6 18" /></>,
     chevron: <path d="m9 6 6 6-6 6" />,
     search: <><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></>,
+    wallet: <><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H19a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 16.5v-9Z" /><path d="M4 8h14a2 2 0 0 1 2 2v1h-4a2 2 0 1 0 0 4h4" /><path d="M16 13h.01" /></>,
     lock: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
     download: <><path d="M12 3v11M7 10l5 5 5-5" /><path d="M4 20h16" /></>,
     moon: <><path d="M20.5 15.6A8.5 8.5 0 0 1 8.4 3.5 8.5 8.5 0 1 0 20.5 15.6Z" /></>,
@@ -129,6 +152,8 @@ function App() {
   const session = production ? serverSession : demoSession;
   const setSession = production ? setServerSession : setDemoSession;
   const [expenses, setExpenses] = usePersistentState(STORAGE_KEY, DEMO_EXPENSES);
+  const [demoSavings, setDemoSavings] = usePersistentState(SAVINGS_KEY, DEMO_SAVINGS);
+  const [savingsAssets, setSavingsAssets] = useState([]);
   const [activeView, setActiveView] = useState('dashboard');
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [filters, setFilters] = useState({ person: 'all', category: 'all', query: '' });
@@ -145,6 +170,10 @@ function App() {
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [downloadConfirmationOpen, setDownloadConfirmationOpen] = useState(false);
+  const [savingsLoading, setSavingsLoading] = useState(false);
+  const [savingsModalOpen, setSavingsModalOpen] = useState(false);
+  const [editingSavingsAsset, setEditingSavingsAsset] = useState(null);
+  const [savingsError, setSavingsError] = useState('');
 
   useEffect(() => {
     applyTheme(theme);
@@ -200,6 +229,24 @@ function App() {
       .finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [production, session, selectedMonth, filters, reloadServerData]);
+
+  const reloadSavings = useCallback(async () => {
+    if (!production || !session) return;
+    setSavingsLoading(true);
+    try {
+      const response = await apiListSavingsAssets();
+      setSavingsAssets(response.items.map(apiSavingsAssetToLocal));
+      setSavingsError('');
+    } catch (error) {
+      setSavingsError(error.message);
+    } finally {
+      setSavingsLoading(false);
+    }
+  }, [production, session]);
+
+  useEffect(() => {
+    if (activeView === 'savings') reloadSavings();
+  }, [activeView, reloadSavings]);
 
   const visibleExpenses = previewMode ? PREVIEW_EXPENSES : expenses;
   const localFilteredExpenses = useMemo(() => sortExpenses(filterExpenses(visibleExpenses, { month: selectedMonth, ...filters })), [visibleExpenses, selectedMonth, filters]);
@@ -296,20 +343,50 @@ function App() {
     notify('هزینه حذف شد.', 'info');
   };
 
+  const openSavingsAdd = () => { setEditingSavingsAsset(null); setSavingsError(''); setSavingsModalOpen(true); };
+  const openSavingsEdit = (asset) => { setEditingSavingsAsset(asset); setSavingsError(''); setSavingsModalOpen(true); };
+  const saveSavingsAsset = (form) => {
+    if (production) {
+      const request = editingSavingsAsset
+        ? apiUpdateSavingsAsset(editingSavingsAsset.serverId || editingSavingsAsset.id, savingsProductionPayload(form))
+        : apiCreateSavingsAsset(savingsProductionPayload(form));
+      request.then(() => reloadSavings()).then(() => {
+        setSavingsModalOpen(false);
+        setEditingSavingsAsset(null);
+        notify(editingSavingsAsset ? 'دارایی ویرایش شد.' : 'دارایی ثبت شد.');
+      }).catch((error) => setSavingsError(error.message));
+      return;
+    }
+    const next = { ...form, id: editingSavingsAsset?.id || crypto.randomUUID() };
+    setDemoSavings((current) => editingSavingsAsset ? current.map((asset) => asset.id === editingSavingsAsset.id ? next : asset) : [next, ...current]);
+    setSavingsModalOpen(false);
+    setEditingSavingsAsset(null);
+    notify(editingSavingsAsset ? 'دارایی ویرایش شد.' : 'دارایی ثبت شد.');
+  };
+  const deleteSavingsAsset = (asset) => {
+    if (!window.confirm('این دارایی حذف شود؟')) return;
+    if (production) {
+      apiDeleteSavingsAsset(asset.serverId || asset.id).then(() => reloadSavings()).then(() => notify('دارایی حذف شد.', 'info')).catch((error) => setSavingsError(error.message));
+      return;
+    }
+    setDemoSavings((current) => current.filter((item) => item.id !== asset.id));
+    notify('دارایی حذف شد.', 'info');
+  };
+  const visibleSavingsAssets = production ? savingsAssets : demoSavings;
+
   return <div className="app-shell">
     <header className="topbar"><div className="brand-lockup"><div className="brand-mark"><img src={BRAND_LOGO_PATH} alt="" /></div><div><strong>خرج‌نگار</strong><small>هزینه‌های خونه</small></div></div><div className="topbar-actions"><ThemeToggle theme={theme} onToggle={toggleTheme} />{production && <button className="download-button" type="button" onClick={() => setDownloadConfirmationOpen(true)} disabled={exporting} title={DOWNLOAD_CONFIRMATION_LABEL} aria-label={DOWNLOAD_CONFIRMATION_LABEL}><Icon name="download" size={16} /></button>}<button className="profile-button" type="button" onClick={() => setPasswordModalOpen(true)} title="تغییر رمز عبور"><span>{PERSON_LABELS[session.person][0]}</span><Icon name="lock" size={17} /></button><button className="logout-button" onClick={async () => { if (production) await apiLogout(); setSession(null); }} title="خروج از حساب"><Icon name="logout" size={17} /></button></div></header>
     <main className="page-content">
       <section className="welcome-row"><div><p className="eyebrow">داشبورد مشترک</p><h1>سلام {PERSON_LABELS[session.person]} <span aria-hidden="true">!</span></h1><p className="muted">هزینه‌ها را ثبت کنید تا تصویر روشن‌تری از خرج‌های خانه داشته باشید.</p></div><button className="primary-button desktop-add" onClick={openAdd}><Icon name="plus" size={20} />ثبت هزینه جدید</button></section>
       <div className="prototype-note"><Icon name="lock" size={17} /><span>{production ? 'داده‌ها به‌صورت امن روی سرور مشترک ذخیره می‌شوند.' : 'این نسخه برای بررسی محصول روی GitHub Pages است؛ داده‌ها فعلاً فقط در همین مرورگر ذخیره می‌شوند.'}</span>{!production && <button onClick={() => setPreviewMode((mode) => !mode)}>{previewMode ? 'داده‌های من' : 'نمایش نمونه'}</button>}</div>
       {serverError && production && <div className="prototype-note server-error"><Icon name="close" size={17} /><span>{serverError}</span></div>}
-      <section className="month-toolbar"><div className="month-picker-wrap"><button className={`month-selector ${monthPickerOpen ? 'open' : ''}`} type="button" aria-haspopup="listbox" aria-expanded={monthPickerOpen} aria-label="انتخاب ماه گزارش" onClick={() => setMonthPickerOpen((open) => !open)}><Icon name="calendar" size={18} /><span className="month-selector-copy"><small>ماه گزارش</small><strong>{getMonthLabel(selectedMonth)}</strong></span><Icon name="chevron" size={17} /></button>{monthPickerOpen && <MonthPicker selectedMonth={selectedMonth} year={selectedMonthParts[0]} options={monthPickerOptions} onSelect={(value, meta = {}) => { setSelectedMonth(value); if (!meta.keepOpen) setMonthPickerOpen(false); }} onClose={() => setMonthPickerOpen(false)} />}</div><div className="toolbar-actions"><button className={`filter-button ${Object.values(filters).some((value) => value !== 'all' && value !== '') ? 'has-filter' : ''}`} onClick={() => setShowFilters((open) => !open)}><Icon name="filter" size={18} />فیلترها</button><button className="mobile-add" aria-label="ثبت هزینه جدید" onClick={openAdd}><Icon name="plus" size={22} /></button></div></section>
-      {showFilters && <FilterPanel filters={filters} setFilters={setFilters} onClose={() => setShowFilters(false)} />}
-      <section className="summary-grid" aria-label="خلاصه هزینه‌ها"><div className={`total-card ${refreshingSummary ? 'is-refreshing' : ''}`}><div className="card-kicker"><span className="kicker-dot" />مجموع هزینه‌ها</div><strong>{formatToman(summary.total).replace(' تومان', '')}</strong><span className="card-unit">تومان</span><div className="total-card-foot"><span>{summary.count} هزینه در {getMonthLabel(selectedMonth)}</span><span className="trend">● ثبت‌شده</span></div></div><PersonCard label="رامین" color="blue" amount={summary.byPerson[PEOPLE.ramin]} total={summary.total} /><PersonCard label="مانا" color="green" amount={summary.byPerson[PEOPLE.mana]} total={summary.total} /></section>
-      <div className="section-tabs" role="tablist" aria-label="بخش‌های داشبورد"><button className={activeView === 'dashboard' ? 'active' : ''} onClick={() => setActiveView('dashboard')}>نمای کلی</button><button className={activeView === 'expenses' ? 'active' : ''} onClick={() => setActiveView('expenses')}>همه هزینه‌ها <span>{filteredExpenses.length}</span></button></div>
-      {activeView === 'dashboard' ? <Dashboard summary={summary} expenses={filteredExpenses} comparison={summary.comparison} onEdit={openEdit} onDelete={deleteExpense} onShowAll={() => setActiveView('expenses')} /> : <ExpensesList expenses={filteredExpenses} onEdit={openEdit} onDelete={deleteExpense} />}
+      {activeView !== 'savings' && <><section className="month-toolbar"><div className="month-picker-wrap"><button className={`month-selector ${monthPickerOpen ? 'open' : ''}`} type="button" aria-haspopup="listbox" aria-expanded={monthPickerOpen} aria-label="انتخاب ماه گزارش" onClick={() => setMonthPickerOpen((open) => !open)}><Icon name="calendar" size={18} /><span className="month-selector-copy"><small>ماه گزارش</small><strong>{getMonthLabel(selectedMonth)}</strong></span><Icon name="chevron" size={17} /></button>{monthPickerOpen && <MonthPicker selectedMonth={selectedMonth} year={selectedMonthParts[0]} options={monthPickerOptions} onSelect={(value, meta = {}) => { setSelectedMonth(value); if (!meta.keepOpen) setMonthPickerOpen(false); }} onClose={() => setMonthPickerOpen(false)} />}</div><div className="toolbar-actions"><button className={`filter-button ${Object.values(filters).some((value) => value !== 'all' && value !== '') ? 'has-filter' : ''}`} onClick={() => setShowFilters((open) => !open)}><Icon name="filter" size={18} />فیلترها</button><button className="mobile-add" aria-label="ثبت هزینه جدید" onClick={openAdd}><Icon name="plus" size={22} /></button></div></section>{showFilters && <FilterPanel filters={filters} setFilters={setFilters} onClose={() => setShowFilters(false)} />}<section className="summary-grid" aria-label="خلاصه هزینه‌ها"><div className={`total-card ${refreshingSummary ? 'is-refreshing' : ''}`}><div className="card-kicker"><span className="kicker-dot" />مجموع هزینه‌ها</div><strong>{formatToman(summary.total).replace(' تومان', '')}</strong><span className="card-unit">تومان</span><div className="total-card-foot"><span>{summary.count} هزینه در {getMonthLabel(selectedMonth)}</span><span className="trend">● ثبت‌شده</span></div></div><PersonCard label="رامین" color="blue" amount={summary.byPerson[PEOPLE.ramin]} total={summary.total} /><PersonCard label="مانا" color="green" amount={summary.byPerson[PEOPLE.mana]} total={summary.total} /></section></>}
+      <div className="section-tabs" role="tablist" aria-label="بخش‌های داشبورد"><button className={activeView === 'dashboard' ? 'active' : ''} onClick={() => setActiveView('dashboard')}>نمای کلی</button><button className={activeView === 'expenses' ? 'active' : ''} onClick={() => setActiveView('expenses')}>همه هزینه‌ها <span>{filteredExpenses.length}</span></button><button className={activeView === 'savings' ? 'active' : ''} onClick={() => setActiveView('savings')}>پس‌اندازها <span>{visibleSavingsAssets.length}</span></button></div>
+      {activeView === 'dashboard' ? <Dashboard summary={summary} expenses={filteredExpenses} comparison={summary.comparison} onEdit={openEdit} onDelete={deleteExpense} onShowAll={() => setActiveView('expenses')} /> : activeView === 'expenses' ? <ExpensesList expenses={filteredExpenses} onEdit={openEdit} onDelete={deleteExpense} /> : <SavingsView assets={visibleSavingsAssets} loading={savingsLoading} error={savingsError} onAdd={openSavingsAdd} onEdit={openSavingsEdit} onDelete={deleteSavingsAsset} />}
     </main>
-    <nav className="bottom-nav" aria-label="ناوبری اصلی"><button className={activeView === 'dashboard' ? 'active' : ''} onClick={() => setActiveView('dashboard')}><Icon name="chart" size={21} /><span>داشبورد</span></button><button onClick={openAdd} className="bottom-add"><span><Icon name="plus" size={24} /></span><label>ثبت هزینه</label></button><button className={activeView === 'expenses' ? 'active' : ''} onClick={() => setActiveView('expenses')}><Icon name="list" size={21} /><span>هزینه‌ها</span></button></nav>
+    <nav className="bottom-nav" aria-label="ناوبری اصلی"><button className={activeView === 'dashboard' ? 'active' : ''} onClick={() => setActiveView('dashboard')}><Icon name="chart" size={21} /><span>داشبورد</span></button><button onClick={openAdd} className="bottom-add"><span><Icon name="plus" size={24} /></span><label>ثبت هزینه</label></button><button className={activeView === 'expenses' ? 'active' : ''} onClick={() => setActiveView('expenses')}><Icon name="list" size={21} /><span>هزینه‌ها</span></button><button className={activeView === 'savings' ? 'active' : ''} onClick={() => setActiveView('savings')}><Icon name="wallet" size={21} /><span>پس‌اندازها</span></button></nav>
     {isFormOpen && <ExpenseModal expense={editingExpense} onSave={saveExpense} onClose={() => { setFormOpen(false); setEditingExpense(null); }} />}
+    {savingsModalOpen && <SavingsModal asset={editingSavingsAsset} error={savingsError} onSave={saveSavingsAsset} onClose={() => { setSavingsModalOpen(false); setEditingSavingsAsset(null); setSavingsError(''); }} />}
     {passwordModalOpen && <PasswordModal production={production} onClose={() => setPasswordModalOpen(false)} onSave={async (currentPassword, newPassword) => { if (!production) throw new Error('تغییر رمز در نسخه آزمایشی فعال نیست.'); await apiChangePassword(currentPassword, newPassword); notify('رمز عبور با موفقیت تغییر کرد.'); setPasswordModalOpen(false); }} />}
     {downloadConfirmationOpen && <DownloadConfirmation onCancel={() => setDownloadConfirmationOpen(false)} onDownload={downloadExport} />}
     {toast && <div className={`toast ${toast.type}`} role="status">{toast.message}</div>}
@@ -330,6 +407,10 @@ function Dashboard({ summary, expenses, comparison, onEdit, onDelete, onShowAll 
   return <><section className="content-grid"><div className="panel category-panel"><div className="panel-heading"><div><p className="eyebrow">تقسیم‌بندی</p><h2>هزینه‌ها کجا رفته‌اند؟</h2></div><Icon name="chart" size={22} /></div>{categories.length ? <div className="category-list">{categories.slice(0, 5).map(({ category, amount }) => <div className="category-row" key={category}><span className="category-icon">{CATEGORY_ICONS[category]}</span><div className="category-meta"><div><strong>{CATEGORY_LABELS[category]}</strong><span>{getCategoryPercentage(amount, summary.total)}٪</span></div><div className="category-bar"><span style={{ width: `${getCategoryPercentage(amount, summary.total)}%` }} /></div></div><b>{formatNumber(amount)}</b></div>)}</div> : <EmptyState text="هنوز هزینه‌ای در این ماه ثبت نشده است." />}</div><div className="panel recent-panel"><div className="panel-heading"><div><p className="eyebrow">آخرین فعالیت‌ها</p><h2>هزینه‌های اخیر</h2></div><button className="text-button" onClick={onShowAll}>مشاهده همه <Icon name="chevron" size={15} /></button></div>{expenses.length ? <div className="recent-list">{expenses.slice(0, 4).map((expense) => <ExpenseRow key={expense.id} expense={expense} onEdit={onEdit} onDelete={onDelete} />)}</div> : <EmptyState text="هزینه‌ای مطابق فیلترهای فعلی پیدا نشد." />}</div></section><section className="insight-strip"><div className="insight-mark">✦</div><div><strong>یک نگاه سریع</strong><p>{categories[0] ? `بیشترین سهم این ماه مربوط به «${CATEGORY_LABELS[categories[0].category]}» است.` : 'با ثبت اولین هزینه، خلاصه وضعیت ماه اینجا نمایش داده می‌شود.'}</p>{comparison?.available && <p className={`month-comparison ${comparison.direction}`}>{comparison.direction === 'less' ? `تا امروز ${comparison.percent}٪ کمتر از ماه قبل خرج شده.` : comparison.direction === 'more' ? `تا امروز ${comparison.percent}٪ بیشتر از ماه قبل خرج شده.` : 'هزینه‌ها نسبت به ماه قبل تغییری نکرده‌اند.'}</p>}</div><span className="insight-value">{categories[0] ? `${getCategoryPercentage(categories[0].amount, summary.total)}٪` : '—'}</span></section><CategoryPieChart summary={summary} /></>;
 }
 function ExpensesList({ expenses, onEdit, onDelete }) { return <section className="panel expenses-panel"><div className="panel-heading"><div><p className="eyebrow">فهرست تراکنش‌ها</p><h2>همه هزینه‌ها</h2></div><span className="result-count">{expenses.length} مورد</span></div>{expenses.length ? <div className="expenses-table">{expenses.map((expense) => <ExpenseRow key={expense.id} expense={expense} onEdit={onEdit} onDelete={onDelete} detailed />)}</div> : <EmptyState text="هزینه‌ای مطابق فیلترهای فعلی پیدا نشد." />}</section>; }
+
+function SavingsView({ assets, loading, error, onAdd, onEdit, onDelete }) { return <section className="savings-section"><div className="savings-heading"><div><p className="eyebrow">دارایی‌های ثبت‌شده</p><h2>پس‌اندازهای من و ما</h2><p className="muted">موجودی دارایی‌ها جدا از هزینه‌های روزمره نگهداری می‌شود.</p></div><button className="primary-button" onClick={onAdd}><Icon name="plus" size={18} />افزودن دارایی</button></div>{error && <p className="form-error">{error}</p>}{loading ? <EmptyState text="در حال دریافت دارایی‌ها..." /> : assets.length ? <div className="savings-grid">{assets.map((asset) => <SavingsCard asset={asset} key={asset.id} onEdit={onEdit} onDelete={onDelete} />)}</div> : <EmptyState text="هنوز دارایی‌ای ثبت نشده است." />}</section>; }
+function SavingsCard({ asset, onEdit, onDelete }) { const assetType = asset.assetType || asset.asset_type; const asOfDate = asset.asOfJalaliDate || asset.as_of_jalali_date; return <article className="savings-card"><div className="savings-card-head"><span className="savings-asset-icon">{SAVINGS_ASSET_ICONS[assetType] || '◇'}</span><div><strong>{asset.title}</strong><small>{asset.symbol} · {SAVINGS_ASSET_TYPE_LABELS[assetType]}</small></div><span className="savings-owner">{SAVINGS_OWNER_LABELS[asset.owner]}</span></div><div className="savings-quantity">{formatSavingsQuantity(asset.quantity)} <small>{asset.unit}</small></div><div className="savings-card-foot"><span>بروزرسانی: {asOfDate}</span><div><button aria-label="ویرایش دارایی" onClick={() => onEdit(asset)}><Icon name="edit" size={15} /></button><button aria-label="حذف دارایی" onClick={() => onDelete(asset)}><Icon name="trash" size={15} /></button></div></div></article>; }
+function SavingsModal({ asset, error, onSave, onClose }) { const [form, setForm] = useState(() => asset ? { assetType: asset.assetType, symbol: asset.symbol, title: asset.title, quantity: asset.quantity, unit: asset.unit, owner: asset.owner, asOfJalaliDate: asset.asOfJalaliDate, note: asset.note || '' } : { assetType: SAVINGS_ASSET_TYPES.crypto, symbol: 'BTC', title: 'بیت‌کوین', quantity: '', unit: 'BTC', owner: SAVINGS_OWNERS.shared, asOfJalaliDate: getTodayJalaliString(), note: '' }); const [localError, setLocalError] = useState(''); const update = (field, value) => setForm((current) => ({ ...current, [field]: value })); const submit = (event) => { event.preventDefault(); try { const quantity = validateSavingsQuantity(form.quantity); if (!form.symbol.trim() || !form.title.trim() || !form.unit.trim()) throw new Error('نام، نماد و واحد دارایی را وارد کنید.'); onSave({ ...form, quantity, symbol: form.symbol.trim().toUpperCase(), title: form.title.trim(), unit: form.unit.trim(), note: form.note.trim() }); } catch (submissionError) { setLocalError(submissionError.message); } }; return <div className="modal-backdrop" role="presentation"><section className="expense-modal savings-modal" role="dialog" aria-modal="true" aria-labelledby="savings-modal-title"><div className="modal-head"><div><p className="eyebrow">دارایی مستقل</p><h2 id="savings-modal-title">{asset ? 'ویرایش دارایی' : 'افزودن دارایی'}</h2></div><button onClick={onClose} aria-label="بستن"><Icon name="close" size={21} /></button></div><form onSubmit={submit} className="expense-form"><div className="form-two-col"><label>نوع دارایی<select value={form.assetType} onChange={(event) => update('assetType', event.target.value)}>{Object.values(SAVINGS_ASSET_TYPES).map((type) => <option value={type} key={type}>{SAVINGS_ASSET_TYPE_LABELS[type]}</option>)}</select></label><label>مالک<select value={form.owner} onChange={(event) => update('owner', event.target.value)}>{Object.values(SAVINGS_OWNERS).map((owner) => <option value={owner} key={owner}>{SAVINGS_OWNER_LABELS[owner]}</option>)}</select></label></div><div className="form-two-col"><label>نام دارایی<input value={form.title} onChange={(event) => update('title', event.target.value)} placeholder="مثلاً بیت‌کوین" /></label><label>نماد<input value={form.symbol} onChange={(event) => update('symbol', event.target.value)} placeholder="مثلاً BTC" /></label></div><div className="form-two-col"><label>مقدار<input inputMode="decimal" value={form.quantity} onChange={(event) => update('quantity', event.target.value)} placeholder="مثلاً ۰.۵" /></label><label>واحد<input value={form.unit} onChange={(event) => update('unit', event.target.value)} placeholder="مثلاً BTC یا گرم" /></label></div><label>تاریخ موجودی<input value={form.asOfJalaliDate} onChange={(event) => update('asOfJalaliDate', event.target.value)} placeholder="۱۴۰۵/۰۵/۲۶" /></label><label>توضیحات <span className="label-hint">اختیاری</span><textarea value={form.note} onChange={(event) => update('note', event.target.value)} rows="2" placeholder="یادداشت اختیاری" /></label>{(localError || error) && <p className="form-error">{localError || error}</p>}<div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>انصراف</button><button type="submit" className="primary-button">{asset ? 'ذخیره تغییرات' : 'ثبت دارایی'}</button></div></form></section></div>; }
 function MonthPicker({ selectedMonth, year, options, onSelect, onClose }) {
   const selectedMonthNumber = Number(selectedMonth.split('-')[1]);
   const changeYear = (offset) => onSelect(`${year + offset}-${String(selectedMonthNumber).padStart(2, '0')}`, { keepOpen: true });

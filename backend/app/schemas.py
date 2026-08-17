@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -16,6 +17,8 @@ CATEGORIES = (
     "pet",
     "miscellaneous",
 )
+SAVINGS_ASSET_TYPES = ("cash", "crypto", "gold", "other")
+SAVINGS_OWNERS = ("ramin", "mana", "shared")
 
 
 class LoginRequest(BaseModel):
@@ -136,3 +139,63 @@ class FilterParams(BaseModel):
 
             parse_month(value)
         return value
+
+
+class SavingsAssetPayload(BaseModel):
+    asset_type: Literal["cash", "crypto", "gold", "other"]
+    symbol: str = Field(min_length=1, max_length=24)
+    title: str = Field(min_length=1, max_length=120)
+    quantity: Decimal = Field(gt=0, le=Decimal("999999999999.999999999999"), max_digits=24, decimal_places=12)
+    unit: str = Field(min_length=1, max_length=24)
+    owner: Literal["ramin", "mana", "shared"]
+    as_of_jalali_date: str = Field(min_length=8, max_length=10)
+    note: str = Field(default="", max_length=1000)
+
+    @field_validator("symbol", "title", "unit")
+    @classmethod
+    def validate_text_fields(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("این فیلد نمی‌تواند خالی باشد.")
+        return value
+
+    @field_validator("as_of_jalali_date")
+    @classmethod
+    def validate_savings_date(cls, value: str) -> str:
+        parse_jalali(value)
+        return value
+
+
+class SavingsAssetResponse(BaseModel):
+    id: int
+    asset_type: Literal["cash", "crypto", "gold", "other"]
+    symbol: str
+    title: str
+    quantity: Decimal
+    unit: str
+    owner: Literal["ramin", "mana", "shared"]
+    as_of_jalali_date: str
+    note: str
+    created_at: datetime
+    updated_at: datetime
+
+
+def savings_asset_response(asset) -> SavingsAssetResponse:
+    return SavingsAssetResponse(
+        id=asset.id,
+        asset_type=asset.asset_type,
+        symbol=asset.symbol,
+        title=asset.title,
+        quantity=asset.quantity.normalize(),
+        unit=asset.unit,
+        owner=asset.owner,
+        as_of_jalali_date=to_jalali(asset.as_of_date),
+        note=asset.note or "",
+        created_at=asset.created_at,
+        updated_at=asset.updated_at,
+    )
+
+
+class SavingsAssetListResponse(BaseModel):
+    items: list[SavingsAssetResponse]
+    count: int

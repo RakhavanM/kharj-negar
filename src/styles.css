@@ -236,6 +236,24 @@ h2 { color: var(--ink); font-size: 20px; line-height: 1.35; letter-spacing: -.45
 .section-tabs span { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-right: 4px; color: var(--dark-green); background: rgba(22, 51, 0, .1); border-radius: 50%; font-size: 10px; }
 .section-tabs button.active span { background: rgba(22, 51, 0, .13); }
 
+.savings-section { margin-bottom: 24px; }
+.savings-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
+.savings-heading .muted { margin-top: 7px; }
+.savings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.savings-card { min-width: 0; padding: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-ring); }
+.savings-card-head { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.savings-asset-icon { width: 42px; height: 42px; display: grid; place-items: center; flex: 0 0 auto; color: var(--on-accent); background: var(--wise-green); border-radius: 14px; font-size: 21px; font-weight: 800; }
+.savings-card-head > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.savings-card-head strong { overflow: hidden; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.savings-card-head small { color: var(--muted); font-size: 10px; }
+.savings-owner { margin-right: auto; color: var(--dark-green); background: var(--soft-green); border-radius: var(--pill); padding: 6px 9px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.savings-quantity { margin-top: 25px; color: var(--ink); font-size: 30px; line-height: 1.1; font-weight: 800; letter-spacing: -.8px; }
+.savings-quantity small { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0; }
+.savings-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 25px; color: var(--muted-light); font-size: 10px; }
+.savings-card-foot > div { display: flex; gap: 4px; }
+.savings-card-foot button { width: 30px; height: 30px; display: grid; place-items: center; color: var(--muted); background: var(--soft-green); border-radius: 50%; }
+.savings-card-foot button:hover { color: var(--on-accent); background: var(--wise-green); }
+
 .content-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
 .panel { min-width: 0; padding: 27px 27px; background: var(--surface); }
 .panel-heading { justify-content: space-between; gap: 15px; margin-bottom: 25px; }
@@ -401,6 +419,11 @@ h2 { color: var(--ink); font-size: 20px; line-height: 1.35; letter-spacing: -.45
   .insight-strip { padding: 14px 15px; margin-top: 12px; border-radius: 18px; }
   .insight-strip p { line-height: 1.7; }
   .section-tabs { margin-bottom: 15px; }
+  .savings-heading { align-items: flex-start; flex-direction: column; gap: 15px; }
+  .savings-heading .primary-button { width: 100%; }
+  .savings-grid { grid-template-columns: 1fr; gap: 10px; }
+  .savings-card { padding: 18px; border-radius: 25px; }
+  .savings-quantity { margin-top: 20px; font-size: 27px; }
   .filter-panel { padding: 14px; border-radius: 25px; }
   .logout-button { display: none; }
   .pie-panel { margin-top: 12px; }
@@ -411,7 +434,7 @@ h2 { color: var(--ink); font-size: 20px; line-height: 1.35; letter-spacing: -.45
   .expense-modal, .password-modal { max-height: calc(100vh - 18px); padding: 22px 17px; border-radius: 26px 26px 0 0; box-shadow: 0 -10px 40px rgba(14, 15, 12, .18), 0 0 0 5px rgba(159, 232, 112, .12); }
   .modal-backdrop { align-items: end; padding: 0; }
   .toast { right: 50%; bottom: 84px; white-space: nowrap; }
-  .bottom-nav { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; height: 70px; display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: end; padding: 6px 23px calc(6px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, .95); border-top: 1px solid var(--line); backdrop-filter: blur(12px); }
+  .bottom-nav { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; height: 70px; display: grid; grid-template-columns: repeat(4, 1fr); align-items: end; padding: 6px 17px calc(6px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, .95); border-top: 1px solid var(--line); backdrop-filter: blur(12px); }
   .bottom-nav button { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--muted-light); background: transparent; font-size: 10px; }
   .bottom-nav button.active { color: var(--dark-green); font-weight: 700; }
   .bottom-nav .bottom-add { position: relative; color: var(--dark-green); }

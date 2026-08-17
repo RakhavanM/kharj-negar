@@ -6,7 +6,7 @@ from sqlalchemy import text
 
 from .config import get_settings
 from .db import engine
-from .routes import auth, expenses, health
+from .routes import auth, expenses, health, savings
 
 settings = get_settings()
 
@@ -35,3 +35,4 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(expenses.router, prefix="/api", tags=["expenses"])
+app.include_router(savings.router, prefix="/api/savings", tags=["savings"])

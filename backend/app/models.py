@@ -1,6 +1,7 @@
 from datetime import date, datetime
+from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -15,6 +16,7 @@ class Household(Base):
 
     users: Mapped[list["User"]] = relationship(back_populates="household", cascade="all, delete-orphan")
     expenses: Mapped[list["Expense"]] = relationship(back_populates="household", cascade="all, delete-orphan")
+    savings_assets: Mapped[list["SavingsAsset"]] = relationship(back_populates="household", cascade="all, delete-orphan")
 
 
 class User(Base):
@@ -31,6 +33,7 @@ class User(Base):
     household: Mapped[Household] = relationship(back_populates="users")
     sessions: Mapped[list["AuthSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     created_expenses: Mapped[list["Expense"]] = relationship(back_populates="created_by")
+    created_savings_assets: Mapped[list["SavingsAsset"]] = relationship(back_populates="created_by")
 
 
 class AuthSession(Base):
@@ -62,3 +65,24 @@ class Expense(Base):
 
     household: Mapped[Household] = relationship(back_populates="expenses")
     created_by: Mapped[User] = relationship(back_populates="created_expenses")
+
+
+class SavingsAsset(Base):
+    __tablename__ = "savings_assets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    household_id: Mapped[int] = mapped_column(ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_by_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+    asset_type: Mapped[str] = mapped_column(String(24), nullable=False, index=True)
+    symbol: Mapped[str] = mapped_column(String(24), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(120), nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(24, 12), nullable=False)
+    unit: Mapped[str] = mapped_column(String(24), nullable=False)
+    owner: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    as_of_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    note: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    created_by: Mapped[User] = relationship(back_populates="created_savings_assets")
+    household: Mapped[Household] = relationship(back_populates="savings_assets")
