@@ -21,7 +21,15 @@ describe('savings UI contract', () => {
     expect(styles).toContain('@media (max-width: 760px)');
   });
 
-  it('supports the requested asset examples and explicit owner values', () => {
+  it('supports dependent type and asset dropdowns without manual asset metadata inputs', () => {
+    expect(source).toContain('aria-label="نوع دارایی"');
+    expect(source).toContain('aria-label="خود دارایی"');
+    expect(source).toContain('aria-label="مقدار دارایی"');
+    expect(source).toContain('getSavingsAssetOptions(form.assetType)');
+    expect(source).toContain('getSavingsAssetDefinition');
+    expect(source).not.toContain('نام دارایی<input');
+    expect(source).not.toContain('نماد<input');
+    expect(source).not.toContain('واحد<input');
     expect(source).toContain('USDT');
     expect(source).toContain('BTC');
     expect(source).toContain('طلا');

@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   SAVINGS_ASSET_TYPES,
+  SAVINGS_ASSET_OPTIONS,
   SAVINGS_OWNERS,
+  getSavingsAssetDefinition,
+  getSavingsAssetOptions,
   formatSavingsQuantity,
   normalizeSavingsQuantity,
   validateSavingsQuantity,
@@ -22,7 +25,15 @@ describe('savings domain', () => {
   });
 
   it('exposes the independent asset types and ownership options', () => {
-    expect(Object.values(SAVINGS_ASSET_TYPES)).toEqual(['cash', 'crypto', 'gold', 'other']);
+    expect(Object.values(SAVINGS_ASSET_TYPES)).toEqual(['cash', 'crypto', 'gold']);
     expect(Object.values(SAVINGS_OWNERS)).toEqual(['ramin', 'mana', 'shared']);
+  });
+
+  it('exposes dependent options for each approved asset type', () => {
+    expect(Object.keys(SAVINGS_ASSET_OPTIONS)).toEqual(['cash', 'crypto', 'gold']);
+    expect(getSavingsAssetOptions('cash').map((asset) => asset.value)).toEqual(['usd', 'toman']);
+    expect(getSavingsAssetOptions('crypto').map((asset) => asset.value)).toEqual(['usdt', 'btc', 'eth', 'bnb', 'sol']);
+    expect(getSavingsAssetOptions('gold').map((asset) => asset.value)).toEqual(['quarter_coin', 'half_coin', 'full_coin', 'gram']);
+    expect(getSavingsAssetDefinition('crypto', 'btc')).toEqual({ value: 'btc', label: 'BTC', symbol: 'BTC', title: 'بیت‌کوین', unit: 'BTC' });
   });
 });

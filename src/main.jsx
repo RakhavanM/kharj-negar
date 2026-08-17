@@ -35,6 +35,8 @@ import {
   SAVINGS_ASSET_TYPES,
   SAVINGS_ASSET_TYPE_LABELS,
   SAVINGS_OWNER_LABELS,
+  getSavingsAssetDefinition,
+  getSavingsAssetOptions,
   SAVINGS_OWNERS,
   formatSavingsQuantity,
   validateSavingsQuantity,
@@ -75,8 +77,8 @@ const DEMO_EXPENSES = [];
 const DEMO_SAVINGS = [
   { id: 'saving-demo-1', assetType: SAVINGS_ASSET_TYPES.crypto, symbol: 'USDT', title: 'تتر', quantity: '100', unit: 'USDT', owner: SAVINGS_OWNERS.shared, asOfJalaliDate: '1405/05/26', note: '' },
   { id: 'saving-demo-2', assetType: SAVINGS_ASSET_TYPES.crypto, symbol: 'BTC', title: 'بیت‌کوین', quantity: '0.5', unit: 'BTC', owner: SAVINGS_OWNERS.ramin, asOfJalaliDate: '1405/05/26', note: '' },
-  { id: 'saving-demo-3', assetType: SAVINGS_ASSET_TYPES.cash, symbol: 'TOMAN', title: 'پول نقد', quantity: '100000000', unit: 'تومان', owner: SAVINGS_OWNERS.shared, asOfJalaliDate: '1405/05/26', note: '' },
-  { id: 'saving-demo-4', assetType: SAVINGS_ASSET_TYPES.gold, symbol: 'GOLD', title: 'طلا', quantity: '3', unit: 'گرم', owner: SAVINGS_OWNERS.mana, asOfJalaliDate: '1405/05/26', note: '' },
+  { id: 'saving-demo-3', assetType: SAVINGS_ASSET_TYPES.cash, symbol: 'TOMAN', title: 'تومان', quantity: '100000000', unit: 'تومان', owner: SAVINGS_OWNERS.shared, asOfJalaliDate: '1405/05/26', note: '' },
+  { id: 'saving-demo-4', assetType: SAVINGS_ASSET_TYPES.gold, symbol: 'GRAM', title: 'گرم', quantity: '3', unit: 'گرم', owner: SAVINGS_OWNERS.mana, asOfJalaliDate: '1405/05/26', note: '' },
 ];
 const PREVIEW_EXPENSES = [
   { id: 'preview-1', amountToman: 420_000, person: PEOPLE.ramin, category: CATEGORIES.daily, date: '2025-03-21', note: 'خرید روزمره', createdAt: '2025-03-24T10:30:00.000Z' },
@@ -412,7 +414,34 @@ function ExpensesList({ expenses, onEdit, onDelete }) { return <section classNam
 
 function SavingsView({ assets, loading, error, onAdd, onEdit, onDelete }) { return <section className="savings-section"><div className="savings-heading"><div><p className="eyebrow">دارایی‌های ثبت‌شده</p><h2>پس‌اندازهای من و ما</h2><p className="muted">موجودی دارایی‌ها جدا از هزینه‌های روزمره نگهداری می‌شود.</p></div><button className="primary-button" onClick={onAdd}><Icon name="plus" size={18} />افزودن دارایی</button></div>{error && <p className="form-error">{error}</p>}{loading ? <EmptyState text="در حال دریافت دارایی‌ها..." /> : assets.length ? <div className="savings-grid">{assets.map((asset) => <SavingsCard asset={asset} key={asset.id} onEdit={onEdit} onDelete={onDelete} />)}</div> : <EmptyState text="هنوز دارایی‌ای ثبت نشده است." />}</section>; }
 function SavingsCard({ asset, onEdit, onDelete }) { const assetType = asset.assetType || asset.asset_type; const asOfDate = asset.asOfJalaliDate || asset.as_of_jalali_date; return <article className="savings-card"><div className="savings-card-head"><span className="savings-asset-icon">{SAVINGS_ASSET_ICONS[assetType] || '◇'}</span><div><strong>{asset.title}</strong><small>{asset.symbol} · {SAVINGS_ASSET_TYPE_LABELS[assetType]}</small></div><span className="savings-owner">{SAVINGS_OWNER_LABELS[asset.owner]}</span></div><div className="savings-quantity">{formatSavingsQuantity(asset.quantity)} <small>{asset.unit}</small></div><div className="savings-card-foot"><span>بروزرسانی: {asOfDate}</span><div><button aria-label="ویرایش دارایی" onClick={() => onEdit(asset)}><Icon name="edit" size={15} /></button><button aria-label="حذف دارایی" onClick={() => onDelete(asset)}><Icon name="trash" size={15} /></button></div></div></article>; }
-function SavingsModal({ asset, error, onSave, onClose }) { const [form, setForm] = useState(() => asset ? { assetType: asset.assetType, symbol: asset.symbol, title: asset.title, quantity: asset.quantity, unit: asset.unit, owner: asset.owner, asOfJalaliDate: asset.asOfJalaliDate, note: asset.note || '' } : { assetType: SAVINGS_ASSET_TYPES.crypto, symbol: 'BTC', title: 'بیت‌کوین', quantity: '', unit: 'BTC', owner: SAVINGS_OWNERS.shared, asOfJalaliDate: getTodayJalaliString(), note: '' }); const [localError, setLocalError] = useState(''); const update = (field, value) => setForm((current) => ({ ...current, [field]: value })); const submit = (event) => { event.preventDefault(); try { const quantity = validateSavingsQuantity(form.quantity); if (!form.symbol.trim() || !form.title.trim() || !form.unit.trim()) throw new Error('نام، نماد و واحد دارایی را وارد کنید.'); onSave({ ...form, quantity, symbol: form.symbol.trim().toUpperCase(), title: form.title.trim(), unit: form.unit.trim(), note: form.note.trim() }); } catch (submissionError) { setLocalError(submissionError.message); } }; return <div className="modal-backdrop" role="presentation"><section className="expense-modal savings-modal" role="dialog" aria-modal="true" aria-labelledby="savings-modal-title"><div className="modal-head"><div><p className="eyebrow">دارایی مستقل</p><h2 id="savings-modal-title">{asset ? 'ویرایش دارایی' : 'افزودن دارایی'}</h2></div><button onClick={onClose} aria-label="بستن"><Icon name="close" size={21} /></button></div><form onSubmit={submit} className="expense-form"><div className="form-two-col"><label>نوع دارایی<select value={form.assetType} onChange={(event) => update('assetType', event.target.value)}>{Object.values(SAVINGS_ASSET_TYPES).map((type) => <option value={type} key={type}>{SAVINGS_ASSET_TYPE_LABELS[type]}</option>)}</select></label><label>مالک<select value={form.owner} onChange={(event) => update('owner', event.target.value)}>{Object.values(SAVINGS_OWNERS).map((owner) => <option value={owner} key={owner}>{SAVINGS_OWNER_LABELS[owner]}</option>)}</select></label></div><div className="form-two-col"><label>نام دارایی<input value={form.title} onChange={(event) => update('title', event.target.value)} placeholder="مثلاً بیت‌کوین" /></label><label>نماد<input value={form.symbol} onChange={(event) => update('symbol', event.target.value)} placeholder="مثلاً BTC" /></label></div><div className="form-two-col"><label>مقدار<input inputMode="decimal" value={form.quantity} onChange={(event) => update('quantity', event.target.value)} placeholder="مثلاً ۰.۵" /></label><label>واحد<input value={form.unit} onChange={(event) => update('unit', event.target.value)} placeholder="مثلاً BTC یا گرم" /></label></div><label>تاریخ موجودی<input value={form.asOfJalaliDate} onChange={(event) => update('asOfJalaliDate', event.target.value)} placeholder="۱۴۰۵/۰۵/۲۶" /></label><label>توضیحات <span className="label-hint">اختیاری</span><textarea value={form.note} onChange={(event) => update('note', event.target.value)} rows="2" placeholder="یادداشت اختیاری" /></label>{(localError || error) && <p className="form-error">{localError || error}</p>}<div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>انصراف</button><button type="submit" className="primary-button">{asset ? 'ذخیره تغییرات' : 'ثبت دارایی'}</button></div></form></section></div>; }
+function SavingsModal({ asset, error, onSave, onClose }) {
+  const initialType = asset?.assetType || SAVINGS_ASSET_TYPES.crypto;
+  const initialOption = asset ? getSavingsAssetOptions(initialType).find((option) => option.symbol === asset.symbol) : getSavingsAssetDefinition(initialType, 'btc');
+  const [form, setForm] = useState(() => ({
+    assetType: initialType,
+    assetValue: initialOption?.value || '',
+    quantity: asset?.quantity || '',
+    owner: asset?.owner || SAVINGS_OWNERS.shared,
+    asOfJalaliDate: asset?.asOfJalaliDate || getTodayJalaliString(),
+    note: asset?.note || '',
+  }));
+  const [localError, setLocalError] = useState('');
+  const assetOptions = getSavingsAssetOptions(form.assetType);
+  const selectedAsset = getSavingsAssetDefinition(form.assetType, form.assetValue);
+  const update = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const changeAssetType = (assetType) => setForm((current) => ({ ...current, assetType, assetValue: getSavingsAssetOptions(assetType)[0]?.value || '' }));
+  const submit = (event) => {
+    event.preventDefault();
+    try {
+      const quantity = validateSavingsQuantity(form.quantity);
+      if (!selectedAsset) throw new Error('دارایی را انتخاب کنید.');
+      onSave({ ...form, quantity, symbol: selectedAsset.symbol, title: selectedAsset.title, unit: selectedAsset.unit, note: form.note.trim() });
+    } catch (submissionError) {
+      setLocalError(submissionError.message);
+    }
+  };
+  return <div className="modal-backdrop" role="presentation"><section className="expense-modal savings-modal" role="dialog" aria-modal="true" aria-labelledby="savings-modal-title"><div className="modal-head"><div><p className="eyebrow">دارایی مستقل</p><h2 id="savings-modal-title">{asset ? 'ویرایش دارایی' : 'افزودن دارایی'}</h2></div><button onClick={onClose} aria-label="بستن"><Icon name="close" size={21} /></button></div><form onSubmit={submit} className="expense-form"><div className="form-two-col"><label>نوع دارایی<select aria-label="نوع دارایی" value={form.assetType} onChange={(event) => changeAssetType(event.target.value)}>{Object.values(SAVINGS_ASSET_TYPES).map((type) => <option value={type} key={type}>{SAVINGS_ASSET_TYPE_LABELS[type]}</option>)}</select></label><label>خود دارایی<select aria-label="خود دارایی" value={form.assetValue} onChange={(event) => update('assetValue', event.target.value)}>{assetOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label></div><label>مقدار<input aria-label="مقدار دارایی" inputMode="decimal" value={form.quantity} onChange={(event) => update('quantity', event.target.value)} placeholder="مثلاً ۰٫۵" /></label><div className="form-two-col"><label>مالک<select value={form.owner} onChange={(event) => update('owner', event.target.value)}>{Object.values(SAVINGS_OWNERS).map((owner) => <option value={owner} key={owner}>{SAVINGS_OWNER_LABELS[owner]}</option>)}</select></label><label>تاریخ موجودی<input value={form.asOfJalaliDate} onChange={(event) => update('asOfJalaliDate', event.target.value)} placeholder="۱۴۰۵/۰۵/۲۶" /></label></div><label>توضیحات <textarea value={form.note} onChange={(event) => update('note', event.target.value)} rows="3" /></label>{(localError || error) && <p className="form-error">{localError || error}</p>}<div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>انصراف</button><button type="submit" className="primary-button">{asset ? 'ذخیره تغییرات' : 'ثبت دارایی'}</button></div></form></section></div>;
+}
 function MonthPicker({ selectedMonth, year, options, onSelect, onClose }) {
   const selectedMonthNumber = Number(selectedMonth.split('-')[1]);
   const changeYear = (offset) => onSelect(`${year + offset}-${String(selectedMonthNumber).padStart(2, '0')}`, { keepOpen: true });

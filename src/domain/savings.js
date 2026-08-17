@@ -4,21 +4,46 @@ export const SAVINGS_ASSET_TYPES = Object.freeze({
   cash: 'cash',
   crypto: 'crypto',
   gold: 'gold',
-  other: 'other',
 });
 
+export const SAVINGS_ASSET_OPTIONS = Object.freeze({
+  cash: Object.freeze([
+    { value: 'usd', label: 'دلار', symbol: 'USD', title: 'دلار', unit: 'دلار' },
+    { value: 'toman', label: 'تومان', symbol: 'TOMAN', title: 'تومان', unit: 'تومان' },
+  ]),
+  crypto: Object.freeze([
+    { value: 'usdt', label: 'USDT', symbol: 'USDT', title: 'تتر', unit: 'USDT' },
+    { value: 'btc', label: 'BTC', symbol: 'BTC', title: 'بیت‌کوین', unit: 'BTC' },
+    { value: 'eth', label: 'ETH', symbol: 'ETH', title: 'اتریوم', unit: 'ETH' },
+    { value: 'bnb', label: 'BNB', symbol: 'BNB', title: 'بایننس کوین', unit: 'BNB' },
+    { value: 'sol', label: 'SOL', symbol: 'SOL', title: 'سولانا', unit: 'SOL' },
+  ]),
+  gold: Object.freeze([
+    { value: 'quarter_coin', label: 'ربع سکه', symbol: 'QUARTER_COIN', title: 'ربع سکه', unit: 'عدد' },
+    { value: 'half_coin', label: 'نیم سکه', symbol: 'HALF_COIN', title: 'نیم سکه', unit: 'عدد' },
+    { value: 'full_coin', label: 'تمام سکه', symbol: 'FULL_COIN', title: 'تمام سکه', unit: 'عدد' },
+    { value: 'gram', label: 'گرم', symbol: 'GRAM', title: 'گرم', unit: 'گرم' },
+  ]),
+});
+
+export function getSavingsAssetOptions(type) {
+  return SAVINGS_ASSET_OPTIONS[type] || [];
+}
+
+export function getSavingsAssetDefinition(type, value) {
+  return getSavingsAssetOptions(type).find((asset) => asset.value === value) || null;
+}
+
 export const SAVINGS_ASSET_TYPE_LABELS = Object.freeze({
-  [SAVINGS_ASSET_TYPES.cash]: 'پول نقد',
+  [SAVINGS_ASSET_TYPES.cash]: 'نقد',
   [SAVINGS_ASSET_TYPES.crypto]: 'رمزارز',
   [SAVINGS_ASSET_TYPES.gold]: 'طلا',
-  [SAVINGS_ASSET_TYPES.other]: 'سایر دارایی‌ها',
 });
 
 export const SAVINGS_ASSET_ICONS = Object.freeze({
   [SAVINGS_ASSET_TYPES.cash]: '₮',
   [SAVINGS_ASSET_TYPES.crypto]: '₿',
   [SAVINGS_ASSET_TYPES.gold]: '◆',
-  [SAVINGS_ASSET_TYPES.other]: '◇',
 });
 
 export const SAVINGS_OWNERS = Object.freeze({

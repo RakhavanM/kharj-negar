@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .jalali import parse_jalali, to_jalali
 
@@ -17,8 +17,26 @@ CATEGORIES = (
     "pet",
     "miscellaneous",
 )
-SAVINGS_ASSET_TYPES = ("cash", "crypto", "gold", "other")
+SAVINGS_ASSET_TYPES = ("cash", "crypto", "gold")
+SAVINGS_ASSET_OPTIONS = (
+    ("cash", ({"symbol": "USD", "title": "دلار", "unit": "دلار"}, {"symbol": "TOMAN", "title": "تومان", "unit": "تومان"})),
+    ("crypto", ({"symbol": "USDT", "title": "تتر", "unit": "USDT"}, {"symbol": "BTC", "title": "بیت‌کوین", "unit": "BTC"}, {"symbol": "ETH", "title": "اتریوم", "unit": "ETH"}, {"symbol": "BNB", "title": "بایننس کوین", "unit": "BNB"}, {"symbol": "SOL", "title": "سولانا", "unit": "SOL"})),
+    ("gold", ({"symbol": "QUARTER_COIN", "title": "ربع سکه", "unit": "عدد"}, {"symbol": "HALF_COIN", "title": "نیم سکه", "unit": "عدد"}, {"symbol": "FULL_COIN", "title": "تمام سکه", "unit": "عدد"}, {"symbol": "GRAM", "title": "گرم", "unit": "گرم"})),
+)
 SAVINGS_OWNERS = ("ramin", "mana", "shared")
+
+
+def _savings_option(asset_type: str, symbol: str) -> dict | None:
+    for option_type, options in SAVINGS_ASSET_OPTIONS:
+        if option_type == asset_type:
+            return next((option for option in options if option["symbol"] == symbol), None)
+    return None
+
+
+def _validate_savings_selection(asset_type: str, symbol: str, title: str, unit: str) -> None:
+    option = _savings_option(asset_type, symbol.upper())
+    if option is None or option["title"] != title.strip() or option["unit"] != unit.strip():
+        raise ValueError("نوع و دارایی انتخاب‌شده معتبر نیستند.")
 
 
 class LoginRequest(BaseModel):
@@ -142,7 +160,7 @@ class FilterParams(BaseModel):
 
 
 class SavingsAssetPayload(BaseModel):
-    asset_type: Literal["cash", "crypto", "gold", "other"]
+    asset_type: Literal["cash", "crypto", "gold"]
     symbol: str = Field(min_length=1, max_length=24)
     title: str = Field(min_length=1, max_length=120)
     quantity: Decimal = Field(gt=0, le=Decimal("999999999999.999999999999"), max_digits=24, decimal_places=12)
@@ -159,6 +177,11 @@ class SavingsAssetPayload(BaseModel):
             raise ValueError("این فیلد نمی‌تواند خالی باشد.")
         return value
 
+    @model_validator(mode="after")
+    def validate_savings_selection(self):
+        _validate_savings_selection(self.asset_type, self.symbol, self.title, self.unit)
+        return self
+
     @field_validator("as_of_jalali_date")
     @classmethod
     def validate_savings_date(cls, value: str) -> str:
@@ -168,7 +191,7 @@ class SavingsAssetPayload(BaseModel):
 
 class SavingsAssetResponse(BaseModel):
     id: int
-    asset_type: Literal["cash", "crypto", "gold", "other"]
+    asset_type: Literal["cash", "crypto", "gold"]
     symbol: str
     title: str
     quantity: Decimal
