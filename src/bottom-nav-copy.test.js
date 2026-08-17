@@ -22,6 +22,8 @@ describe('bottom navigation and dashboard copy', () => {
     expect(source).not.toContain('دارایی‌های ثبت‌شده');
     expect(styles).toContain('.topbar-greeting');
     expect(styles).toContain('font-size: 20px');
+    expect(styles).toContain('.welcome-row');
+    expect(styles).toContain('padding: 30px 0 30px');
   });
 
   it('does not add a stacked bar chart or valuation model', () => {

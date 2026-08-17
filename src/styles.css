@@ -133,7 +133,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .theme-toggle span, .download-button span { display: none; }
 
 .page-content { width: min(1180px, calc(100% - 52px)); margin: 0 auto; }
-.welcome-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 57px 0 30px; }
+.welcome-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 30px 0 30px; }
 .expenses-title { margin-bottom: 8px; font-size: 20px; line-height: 1.35; letter-spacing: -.3px; }
 .eyebrow { color: var(--muted-light); font-size: 11px; font-weight: 600; letter-spacing: -.1px; margin: 0 0 8px; }
 h1, h2, p { margin-top: 0; }
@@ -403,7 +403,7 @@ h2 { color: var(--ink); font-size: 20px; line-height: 1.35; letter-spacing: -.45
   .download-button { min-width: 37px; width: 37px; height: 37px; min-height: 37px; justify-content: center; padding: 0; border-radius: 50%; }
   .download-button span { display: none; }
   .page-content { width: min(100% - 32px, 590px); }
-  .welcome-row { align-items: flex-start; padding: 31px 0 21px; }
+  .welcome-row { align-items: flex-start; padding: 30px 0 21px; }
   .welcome-row .muted { max-width: 310px; font-size: 11px; }
   .desktop-add { display: none; }
   .prototype-note { align-items: flex-start; margin-bottom: 18px; border-radius: 18px; padding: 10px 13px; font-size: 10px; }
