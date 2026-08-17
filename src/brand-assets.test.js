@@ -20,6 +20,7 @@ describe('brand asset contract', () => {
     expect(indexHtml).toContain('./favicon-pencil-v2.png');
     expect(indexHtml).toContain('./manifest.webmanifest');
     expect(readFileSync(resolve(root, 'src/main.jsx'), 'utf8')).toContain("new URL('logo.png', import.meta.env.BASE_URL)");
+    expect(readFileSync(resolve(root, 'vite.config.js'), 'utf8')).toContain("base: '/kharj-negar/'");
   });
 
   it('declares installable logo icons in the manifest', () => {
