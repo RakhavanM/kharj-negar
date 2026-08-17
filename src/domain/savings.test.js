@@ -6,6 +6,8 @@ import {
   SAVINGS_OWNERS,
   getSavingsAssetDefinition,
   getSavingsAssetOptions,
+  aggregateSavingsAssets,
+  addSavingsQuantities,
   formatSavingsQuantity,
   normalizeSavingsQuantity,
   validateSavingsQuantity,

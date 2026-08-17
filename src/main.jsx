@@ -35,6 +35,7 @@ import {
   SAVINGS_ASSET_TYPES,
   SAVINGS_ASSET_TYPE_LABELS,
   SAVINGS_OWNER_LABELS,
+  aggregateSavingsAssets,
   getSavingsAssetDefinition,
   getSavingsAssetOptions,
   SAVINGS_OWNERS,
@@ -349,10 +350,12 @@ function App() {
   const openSavingsAdd = () => { setEditingSavingsAsset(null); setSavingsError(''); setSavingsModalOpen(true); };
   const openSavingsEdit = (asset) => { setEditingSavingsAsset(asset); setSavingsError(''); setSavingsModalOpen(true); };
   const saveSavingsAsset = (form) => {
+    const sourceIds = editingSavingsAsset?.sourceIds || (editingSavingsAsset ? [editingSavingsAsset.serverId || editingSavingsAsset.id] : []);
     if (production) {
+      const payload = savingsProductionPayload(form);
       const request = editingSavingsAsset
-        ? apiUpdateSavingsAsset(editingSavingsAsset.serverId || editingSavingsAsset.id, savingsProductionPayload(form))
-        : apiCreateSavingsAsset(savingsProductionPayload(form));
+        ? apiUpdateSavingsAsset(sourceIds[0], payload).then(() => Promise.all(sourceIds.slice(1).map((id) => apiDeleteSavingsAsset(id))))
+        : apiCreateSavingsAsset(payload);
       request.then(() => reloadSavings()).then(() => {
         setSavingsModalOpen(false);
         setEditingSavingsAsset(null);
@@ -361,21 +364,25 @@ function App() {
       return;
     }
     const next = { ...form, id: editingSavingsAsset?.id || crypto.randomUUID() };
-    setDemoSavings((current) => editingSavingsAsset ? current.map((asset) => asset.id === editingSavingsAsset.id ? next : asset) : [next, ...current]);
+    setDemoSavings((current) => {
+      if (editingSavingsAsset) return [next, ...current.filter((item) => !sourceIds.includes(item.id))];
+      return [next, ...current];
+    });
     setSavingsModalOpen(false);
     setEditingSavingsAsset(null);
     notify(editingSavingsAsset ? 'دارایی ویرایش شد.' : 'دارایی ثبت شد.');
   };
   const deleteSavingsAsset = (asset) => {
     if (!window.confirm('این دارایی حذف شود؟')) return;
+    const sourceIds = asset.sourceIds || [asset.serverId || asset.id];
     if (production) {
-      apiDeleteSavingsAsset(asset.serverId || asset.id).then(() => reloadSavings()).then(() => notify('دارایی حذف شد.', 'info')).catch((error) => setSavingsError(error.message));
+      Promise.all(sourceIds.map((id) => apiDeleteSavingsAsset(id))).then(() => reloadSavings()).then(() => notify('دارایی حذف شد.', 'info')).catch((error) => setSavingsError(error.message));
       return;
     }
-    setDemoSavings((current) => current.filter((item) => item.id !== asset.id));
+    setDemoSavings((current) => current.filter((item) => !sourceIds.includes(item.id)));
     notify('دارایی حذف شد.', 'info');
   };
-  const visibleSavingsAssets = production ? savingsAssets : demoSavings;
+  const visibleSavingsAssets = aggregateSavingsAssets(production ? savingsAssets : demoSavings);
 
   return <div className="app-shell">
     <header className="topbar"><div className="brand-lockup"><div className="brand-mark"><img src={BRAND_LOGO_PATH} alt="" /></div><div><strong>خرج‌نگار</strong><small>هزینه‌های خونه</small></div></div><div className="topbar-actions"><ThemeToggle theme={theme} onToggle={toggleTheme} />{production && <button className="download-button" type="button" onClick={() => setDownloadConfirmationOpen(true)} disabled={exporting} title={DOWNLOAD_CONFIRMATION_LABEL} aria-label={DOWNLOAD_CONFIRMATION_LABEL}><Icon name="download" size={16} /></button>}<button className="profile-button" type="button" onClick={() => setPasswordModalOpen(true)} title="تغییر رمز عبور"><span>{PERSON_LABELS[session.person][0]}</span><Icon name="lock" size={17} /></button><button className="logout-button" onClick={async () => { if (production) await apiLogout(); setSession(null); }} title="خروج از حساب"><Icon name="logout" size={17} /></button></div></header>

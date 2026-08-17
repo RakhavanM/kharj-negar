@@ -77,6 +77,34 @@ export function validateSavingsQuantity(value) {
   return normalized;
 }
 
+export function addSavingsQuantities(first, second) {
+  const [firstInteger, firstFraction = ''] = normalizeSavingsQuantity(first).split('.');
+  const [secondInteger, secondFraction = ''] = normalizeSavingsQuantity(second).split('.');
+  const scale = Math.max(firstFraction.length, secondFraction.length);
+  const firstScaled = BigInt(`${firstInteger}${firstFraction.padEnd(scale, '0')}`);
+  const secondScaled = BigInt(`${secondInteger}${secondFraction.padEnd(scale, '0')}`);
+  const total = (firstScaled + secondScaled).toString().padStart(scale + 1, '0');
+  const integer = scale ? total.slice(0, -scale) : total;
+  const fraction = scale ? total.slice(-scale).replace(/0+$/, '') : '';
+  return fraction ? `${integer}.${fraction}` : integer;
+}
+
+export function aggregateSavingsAssets(assets) {
+  const groups = new Map();
+  assets.forEach((asset) => {
+    const assetType = asset.assetType || asset.asset_type;
+    const key = [assetType, asset.symbol, asset.unit, asset.owner].join('|');
+    const current = groups.get(key);
+    if (current) {
+      current.quantity = addSavingsQuantities(current.quantity, asset.quantity);
+      current.sourceIds = [...current.sourceIds, asset.id];
+    } else {
+      groups.set(key, { ...asset, assetType, sourceIds: [asset.id] });
+    }
+  });
+  return [...groups.values()];
+}
+
 export function formatSavingsQuantity(value) {
   const normalized = normalizeSavingsQuantity(value);
   if (!normalized) return '';
