@@ -7,8 +7,8 @@ const styles = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
 
 describe('savings UI contract', () => {
   it('has an independent savings tab and bottom navigation entry', () => {
-    expect(source).toContain('activeView === \'savings\'');
-    expect(source).toContain('پس‌اندازها');
+    expect(source).toContain("activeSection === 'savings'");
+    expect(source).toContain('پس‌انداز');
     expect(source).toContain('<SavingsView');
     expect(source).toContain('SavingsModal');
   });
