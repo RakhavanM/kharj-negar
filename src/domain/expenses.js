@@ -257,13 +257,14 @@ export function filterExpenses(expenses, filters = {}) {
   });
 }
 
-export function getMonthSummary(expenses, monthKey, filters = {}) {
+export function getMonthSummary(expenses, monthKey, filters = {}, categoryCodes = Object.values(CATEGORIES)) {
   const inMonth = filterExpenses(expenses, { month: monthKey, ...filters });
   const byPerson = { [PEOPLE.ramin]: 0, [PEOPLE.mana]: 0 };
-  const byCategory = Object.fromEntries(Object.values(CATEGORIES).map((category) => [category, 0]));
+  const codes = [...new Set([...categoryCodes, ...inMonth.map((expense) => expense.category)])];
+  const byCategory = Object.fromEntries(codes.map((category) => [category, 0]));
   inMonth.forEach((expense) => {
     byPerson[expense.person] += expense.amountToman;
-    byCategory[expense.category] += expense.amountToman;
+    byCategory[expense.category] = (byCategory[expense.category] || 0) + expense.amountToman;
   });
   return { total: inMonth.reduce((sum, expense) => sum + expense.amountToman, 0), count: inMonth.length, byPerson, byCategory };
 }

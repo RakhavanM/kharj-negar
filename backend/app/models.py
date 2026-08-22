@@ -16,6 +16,7 @@ class Household(Base):
 
     users: Mapped[list["User"]] = relationship(back_populates="household", cascade="all, delete-orphan")
     expenses: Mapped[list["Expense"]] = relationship(back_populates="household", cascade="all, delete-orphan")
+    categories: Mapped[list["Category"]] = relationship(back_populates="household", cascade="all, delete-orphan")
     savings_assets: Mapped[list["SavingsAsset"]] = relationship(back_populates="household", cascade="all, delete-orphan")
 
 
@@ -34,6 +35,7 @@ class User(Base):
     sessions: Mapped[list["AuthSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     created_expenses: Mapped[list["Expense"]] = relationship(back_populates="created_by")
     created_savings_assets: Mapped[list["SavingsAsset"]] = relationship(back_populates="created_by")
+    created_categories: Mapped[list["Category"]] = relationship(back_populates="created_by")
 
 
 class AuthSession(Base):
@@ -65,6 +67,24 @@ class Expense(Base):
 
     household: Mapped[Household] = relationship(back_populates="expenses")
     created_by: Mapped[User] = relationship(back_populates="created_expenses")
+
+
+class Category(Base):
+    __tablename__ = "categories"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    household_id: Mapped[int] = mapped_column(ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_by_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+    code: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true", index=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    household: Mapped[Household] = relationship(back_populates="categories")
+    created_by: Mapped[User] = relationship(back_populates="created_categories")
 
 
 class SavingsAsset(Base):

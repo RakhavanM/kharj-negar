@@ -71,9 +71,11 @@ def create_expenses_workbook(
     expenses: Iterable,
     users: Iterable | None = None,
     household_name: str = "خرج‌نگار",
+    category_labels: dict[str, str] | None = None,
 ) -> bytes:
     expenses = list(expenses)
     users = list(users or [])
+    category_labels = {**CATEGORY_LABELS, **(category_labels or {})}
     workbook = Workbook()
     expenses_sheet = workbook.active
     expenses_sheet.title = "هزینه‌ها"
@@ -99,7 +101,7 @@ def create_expenses_workbook(
             expense.amount_toman,
             expense.amount_toman // 1000,
             PERSON_LABELS.get(expense.person, expense.person),
-            CATEGORY_LABELS.get(expense.category, expense.category),
+            category_labels.get(expense.category, expense.category),
             to_jalali(expense.expense_date),
             expense.expense_date,
             expense.note or "",
@@ -141,7 +143,7 @@ def create_expenses_workbook(
         summary_sheet.append([
             f"{MONTH_NAMES[int(month_key[5:7]) - 1]} {month_key[:4]}",
             month_data["count"], month_data["total"], month_data["ramin"], month_data["mana"],
-            CATEGORY_LABELS.get(top_category, top_category), month_data["categories"][top_category],
+            category_labels.get(top_category, top_category), month_data["categories"][top_category],
         ])
     if summary_sheet.max_row >= 3:
         _add_table(summary_sheet, f"A2:G{summary_sheet.max_row}", "MonthlySummary")

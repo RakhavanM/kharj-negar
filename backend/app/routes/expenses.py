@@ -8,8 +8,16 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_user, require_csrf
 from ..db import get_db
 from ..jalali import current_month, month_label, month_range, parse_jalali, previous_month
-from ..models import Expense, User
+from ..models import Category, Expense, User
 from ..schemas import ComparisonResponse, ExpenseListResponse, ExpensePayload, ExpenseResponse, SummaryResponse, expense_response
+
+
+def ensure_category_available(code: str, user: User, db: Session) -> None:
+    category = db.scalar(select(Category).where(Category.household_id == user.household_id, Category.code == code))
+    if category is None:
+        raise HTTPException(status_code=422, detail="دسته‌بندی انتخاب‌شده معتبر نیست.")
+    if not category.is_active:
+        raise HTTPException(status_code=422, detail="دسته‌بندی انتخاب‌شده غیرفعال است.")
 
 router = APIRouter()
 
@@ -29,7 +37,8 @@ def export_xlsx(
         )
     )
     users = list(db.scalars(select(User).where(User.household_id == user.household_id).order_by(User.id)))
-    workbook = create_expenses_workbook(expenses, users=users, household_name="خرج‌نگار")
+    category_labels = {category.code: category.name for category in db.scalars(select(Category).where(Category.household_id == user.household_id))}
+    workbook = create_expenses_workbook(expenses, users=users, household_name="خرج‌نگار", category_labels=category_labels)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     filename = f"kharj-negar-export-{timestamp}.xlsx"
     return StreamingResponse(
@@ -74,6 +83,7 @@ def create_expense(
     _: None = Depends(require_csrf),
     db: Session = Depends(get_db),
 ) -> ExpenseResponse:
+    ensure_category_available(payload.category, user, db)
     expense = Expense(
         household_id=user.household_id,
         created_by_id=user.id,
@@ -97,6 +107,7 @@ def update_expense(
     _: None = Depends(require_csrf),
     db: Session = Depends(get_db),
 ) -> ExpenseResponse:
+    ensure_category_available(payload.category, user, db)
     expense = db.scalar(select(Expense).where(Expense.id == expense_id, Expense.household_id == user.household_id))
     if expense is None:
         raise HTTPException(status_code=404, detail="هزینه پیدا نشد.")
@@ -152,10 +163,11 @@ def summary(
         statement = statement.where(Expense.note.ilike(f"%{q}%"))
     expenses = list(db.scalars(statement))
     by_person = {"ramin": 0, "mana": 0}
-    by_category = {key: 0 for key in ("daily", "installment", "rent", "car", "home", "debt", "pet", "miscellaneous")}
+    category_codes = [code for (code,) in db.execute(select(Category.code).where(Category.household_id == user.household_id))]
+    by_category = {key: 0 for key in category_codes}
     for expense in expenses:
         by_person[expense.person] += expense.amount_toman
-        by_category[expense.category] += expense.amount_toman
+        by_category[expense.category] = by_category.get(expense.category, 0) + expense.amount_toman
     previous_key = previous_month(selected_month)
     previous_start, previous_end = month_range(previous_key)
     previous_statement = select(Expense).where(

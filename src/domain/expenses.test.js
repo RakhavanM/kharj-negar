@@ -85,6 +85,17 @@ describe('expense summaries and filters', () => {
     expect(summary.byPerson[PEOPLE.mana]).toBe(1_000_000);
     expect(summary.byCategory[CATEGORIES.pet]).toBe(1_250_000);
   });
+
+  it('includes household-defined categories in the local summary', () => {
+    const custom = { id: '4', amountToman: 300_000, person: PEOPLE.ramin, category: 'hobby', date: '2025-03-23', note: 'کتاب' };
+    const summary = getMonthSummary([...expenses, custom], '1404-01', {}, [...Object.values(CATEGORIES), 'hobby']);
+    expect(summary.byCategory.hobby).toBe(300_000);
+  });
+
+  it('keeps a legacy category in the breakdown when it is omitted from the active catalog', () => {
+    const summary = getMonthSummary(expenses, '1404-01', {}, [CATEGORIES.daily]);
+    expect(summary.byCategory[CATEGORIES.pet]).toBe(1_250_000);
+  });
 });
 
 it('exports the supported people and categories', () => {

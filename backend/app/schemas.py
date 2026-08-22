@@ -77,9 +77,7 @@ class ComparisonResponse(BaseModel):
 class ExpensePayload(BaseModel):
     amount_thousands: int = Field(gt=0, le=100_000_000)
     person: Literal["ramin", "mana"]
-    category: Literal[
-        "daily", "installment", "rent", "car", "home", "debt", "pet", "miscellaneous"
-    ]
+    category: str = Field(min_length=1, max_length=64)
     jalali_date: str = Field(min_length=8, max_length=10)
     note: str = Field(default="", max_length=1000)
 
@@ -90,14 +88,40 @@ class ExpensePayload(BaseModel):
         return value
 
 
+class CategoryPayload(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    version: int | None = Field(default=None, ge=1)
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        value = " ".join(value.split())
+        if not value:
+            raise ValueError("نام دسته‌بندی نمی‌تواند خالی باشد.")
+        return value
+
+
+class CategoryResponse(BaseModel):
+    id: int
+    code: str
+    name: str
+    is_active: bool
+    sort_order: int
+    version: int
+    in_use: bool = False
+
+
+class CategoryListResponse(BaseModel):
+    items: list[CategoryResponse]
+    count: int
+
+
 class ExpenseResponse(BaseModel):
     id: int
     amount_thousands: int
     amount_toman: int
     person: Literal["ramin", "mana"]
-    category: Literal[
-        "daily", "installment", "rent", "car", "home", "debt", "pet", "miscellaneous"
-    ]
+    category: str
     jalali_date: str
     note: str
     created_at: datetime

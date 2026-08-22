@@ -41,6 +41,26 @@ export async function apiChangePassword(currentPassword, newPassword) {
   });
 }
 
+export async function apiListCategories(includeInactive = false) {
+  return apiRequest(`/categories${includeInactive ? '?include_inactive=true' : ''}`);
+}
+
+export async function apiCreateCategory(name) {
+  return apiRequest('/categories', { method: 'POST', body: JSON.stringify({ name }) });
+}
+
+export async function apiUpdateCategory(id, name, version) {
+  return apiRequest(`/categories/${id}`, { method: 'PATCH', body: JSON.stringify({ name, version }) });
+}
+
+export async function apiDeleteCategory(id) {
+  return apiRequest(`/categories/${id}`, { method: 'DELETE' });
+}
+
+export async function apiRestoreCategory(id) {
+  return apiRequest(`/categories/${id}/restore`, { method: 'POST' });
+}
+
 export async function apiListExpenses({ month, person, category, query }) {
   const params = new URLSearchParams({ month });
   if (person && person !== 'all') params.set('person', person);
